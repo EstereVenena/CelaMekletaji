@@ -75,6 +75,8 @@ p{
 .muted{ color:var(--muted); }
 .lead{ font-size:1.15rem; line-height:1.8rem; }
 
+.small{ font-size:.95rem; }
+
 .container{
     max-width:var(--container);
     margin:0 auto;
@@ -408,7 +410,7 @@ p{
 }
 .link:hover{ color:var(--blue-900); }
 
-/* club cards */
+/* club cards (index page) */
 .club-top{
     display:flex;
     align-items:center;
@@ -418,14 +420,22 @@ p{
 .club-card i{ margin-right:.35rem; }
 
 /* =========================
-   ABOUT PROGRAM CARDS (BADGE NEXT TO LOGO)
-   Best workflow: flex header + clamp fonts
+   ABOUT PROGRAM CARDS
+   Fix: badge next to logo (not under)
    ========================= */
 .program-cards .program-card{
     text-align:left;
     cursor:pointer;
+    border:var(--border);
+    background:var(--surface);
 }
 
+/* You MUST use this structure in HTML:
+   <div class="program-head">
+      <div class="program-logo"><img ...></div>
+      <span class="badge ...">...</span>
+   </div>
+*/
 .program-head{
     display:flex;
     align-items:flex-start;
@@ -451,6 +461,13 @@ p{
     width:auto;
 }
 
+.program-card h3{
+    margin-top:.15rem;
+    margin-bottom:.25rem;
+    font-size:clamp(1.1rem, 1.5vw, 1.25rem);
+    font-weight:1000;
+}
+
 .program-badge{
     display:inline-flex;
     align-items:center;
@@ -468,13 +485,6 @@ p{
     color:#5a4300;
 
     box-shadow:0 4px 10px rgba(0,0,0,.08);
-}
-
-.program-card h3{
-    margin-top:.15rem;
-    margin-bottom:.25rem;
-    font-size:clamp(1.1rem, 1.5vw, 1.25rem);
-    font-weight:1000;
 }
 
 /* =========================
@@ -853,55 +863,209 @@ p{
 .modal-list li{ margin:.35rem 0; }
 
 /* =========================
-   LOGIN
+   CLUBS MAP (Leaflet) + Proximity UI
    ========================= */
-.login-page{
-    min-height:100vh;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    background:var(--bg);
-}
-.login-card{
-    background:var(--white);
-    max-width:420px;
-    width:100%;
-    padding:2.5rem;
-    border-radius:var(--radius);
-    border:2px solid var(--blue-800);
-    box-shadow:var(--shadow);
-    text-align:center;
+.map-card{
+    background: var(--surface);
+    border: var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
 }
 
-/* =========================
-   ADMIN SIDEBAR
-   ========================= */
-.sidebar{
-    width:17rem;
-    background:var(--blue-800);
-    height:100%;
-    position:fixed;
-    padding:1rem;
+.leaflet-map{
+    height: 560px;
+    width: 100%;
 }
-.sidebar .nav-link{
-    color:var(--white);
+
+/* Tools row (button + radius slider) */
+.map-tools{
+    display:flex;
+    align-items:center;
+    gap:1rem;
+    flex-wrap:wrap;
+    margin: 0 0 1rem;
+}
+
+.radius{
+    display:flex;
+    flex-direction:column;
+    gap:.35rem;
+    min-width: 220px;
+}
+
+.radius input[type="range"]{
+    width: 260px;
+    max-width: 100%;
+}
+
+/* Closest list */
+.closest-list{
+    margin-top: 1rem;
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+}
+
+.closest-card{
+    background: var(--surface);
+    border: var(--border);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-sm);
+    padding: 1rem;
+}
+
+.closest-card h4{
+    font-weight:1000;
+    margin-bottom:.25rem;
+}
+
+.closest-card .km{
+    font-weight:1000;
+    color: var(--blue-800);
+}
+
+.closest-card a{
+    color: var(--blue-800);
+    font-weight:1000;
+}
+.closest-card a:hover{ color: var(--blue-900); }
+
+/* Triangle marker */
+.tri-marker{
+    background: transparent !important;
+    border: none !important;
+}
+.tri-marker .tri{
+    display:block;
+    width:0;
+    height:0;
+    border-left:11px solid transparent;
+    border-right:11px solid transparent;
+    border-top:18px solid rgba(120, 30, 30, .85);
+    filter: drop-shadow(0 8px 12px rgba(0,0,0,.22));
+    transform: translateY(2px);
+}
+
+/* Optional: per-program colors */
+.tri-marker.cm .tri{ border-top-color: rgba(30,79,161,.92); }
+.tri-marker.pm .tri{ border-top-color: rgba(244,196,48,.92); }
+.tri-marker.mg .tri{ border-top-color: rgba(40,140,80,.92); }
+.tri-marker.v  .tri{ border-top-color: rgba(198,40,40,.92); }
+
+/* Proximity highlight */
+.tri-marker.is-far{ filter: grayscale(0.85) opacity(0.55); }
+.tri-marker.is-near{ filter: none; }
+.tri-marker.is-near .tri{
+    filter: drop-shadow(0 10px 16px rgba(0,0,0,.30));
+    border-top-width: 20px;
+}
+
+/* Tooltip wrapper we set in JS: className: "club-tooltip-wrap ..." */
+.leaflet-tooltip.club-tooltip-wrap{
+    background: rgba(255,255,255,.96) !important;
+    border: 1px solid rgba(0,0,0,.10) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 16px 40px rgba(0,0,0,.18) !important;
+    padding: .8rem .9rem !important;
+    color: var(--text) !important;
+}
+
+/* Remove tooltip arrow border glitch */
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before{
+    border: none !important;
+}
+
+/* Tooltip content */
+.tt-title{
+    font-weight:1000;
+    font-size:1.05rem;
+    margin-bottom:.35rem;
+}
+.tt-muted{
+    color: rgba(30,30,30,.72);
+    font-size:.95rem;
+    line-height:1.25rem;
+}
+
+/* Program list used by JS */
+.tt-list{
+    display:flex;
+    flex-direction:column;
+    gap:.45rem;
+    margin-top:.35rem;
+}
+
+.tt-row{
+    display:flex;
+    align-items:center;
+    gap:.55rem;
+    color: rgba(30,30,30,.88);
+    font-size:.95rem;
+    line-height:1.2rem;
+}
+
+.tt-ico{
+    width:26px;
+    height:26px;
+    border-radius:8px;
+    background: rgba(30,79,161,.06);
+    border: 1px solid rgba(30,79,161,.12);
+    padding:3px;
+    object-fit:contain;
+}
+
+.tt-label{
     font-weight:900;
 }
 
-/* =========================
-   MAP WRAPPER
-   ========================= */
-.map-wrapper{
-    position:relative;
-    height:520px;
-    background:#e6ebf5 url("img/latvia_map.png") center/contain no-repeat;
-    border-radius:16px;
-    box-shadow:0 15px 40px rgba(0,0,0,.15);
-    overflow:hidden;
+/* Compact hover mode */
+.tt-list--compact{ gap:.25rem; }
+.tt-row--compact{ gap:.45rem; }
+.tt-ico--compact{ width:20px; height:20px; padding:2px; }
+.tt-label--compact{ font-size:.9rem; line-height:1.1; font-weight:900; }
+
+/* Clubs modal (map details) */
+.cm-modal{ display:none; position:fixed; inset:0; z-index:9999; }
+.cm-modal.is-open{ display:block; }
+
+.cm-modal__backdrop{
+  position:absolute; inset:0;
+  background: rgba(0,0,0,.55);
 }
 
+.cm-modal__panel{
+  position:relative;
+  width:min(720px, 92vw);
+  max-height: 85vh;
+  overflow:auto;
+  margin: 6vh auto;
+  background: var(--surface);
+  border: var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  box-shadow: var(--shadow);
+}
+
+.cm-modal__close{
+  position:sticky;
+  top:0;
+  float:right;
+  border:0;
+  background:transparent;
+  font-size:28px;
+  line-height:1;
+  cursor:pointer;
+  color: var(--text);
+}
+
+.club-details__title{ margin: 0 0 .35rem; font-weight:1000; }
+.club-details__meta{ margin: .35rem 0 .75rem; }
+.club-details__actions{ margin-top: .75rem; }
+
 /* =========================
-   FOOTER (single source of truth)
+   FOOTER
    ========================= */
 .site-footer{
     background:var(--blue-800);
@@ -925,8 +1089,8 @@ p{
     letter-spacing:.2px;
 }
 
-.footer-muted{
-    color:rgba(255,255,255,.82);
+.footer-col p{
+    color:rgba(255,255,255,.85);
     font-size:1rem;
     line-height:1.6rem;
 }
@@ -951,16 +1115,13 @@ p{
     text-align:center;
 }
 
-.footer-link,
+.footer-links li{ margin-bottom:.45rem; }
+
 .footer-links a{
     color:rgba(255,255,255,.92);
     font-weight:900;
 }
-
-.footer-link:hover,
 .footer-links a:hover{ color:var(--gold); }
-
-.footer-links li{ margin-bottom:.45rem; }
 
 .footer-bottom{
     text-align:center;
@@ -1064,13 +1225,16 @@ p{
         padding:.9rem .9rem .6rem;
     }
 
-    /* Program header scales nicely */
+    /* About program card header scales */
     .program-logo{
         width:64px;
         height:64px;
         border-radius:14px;
     }
     .program-logo img{ max-height:52px; }
+
+    /* Map */
+    .leaflet-map{ height:460px; }
 }
 
 @media (max-width:420px){
@@ -1085,7 +1249,5 @@ p{
 
     .lightbox-img{ max-height:58vh; }
 
-    /* Let badge breathe on tiny screens */
     .program-head{ gap:.55rem; }
-    .program-badge{ padding:.3rem .6rem; }
 }
