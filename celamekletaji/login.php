@@ -49,3 +49,69 @@
 
 </body>
 </html>
+
+
+
+
+
+
+<?php
+session_start();
+require_once("../database.php");
+
+$kluda = "";
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $lietotajvards = $_POST['lietotajvards'];
+    $parole = $_POST['parole'];
+
+    $sql = "SELECT * FROM viesnicas_darbinieki WHERE lietotajvards = ?";
+    $stmt = $savienojums->prepare($sql);
+    $stmt->bind_param("s", $lietotajvards);
+    $stmt->execute();
+    $rezultats = $stmt->get_result();
+
+    if ($rezultats->num_rows === 1) {
+        $lietotajs = $rezultats->fetch_assoc();
+        if (password_verify($parole, $lietotajs['parole'])) {
+            $_SESSION['lietotajvards'] = $lietotajvards;
+            header("Location: index.php");
+            exit();
+        } else {
+            $kluda = "Nepareiza parole!";
+        }
+    } else {
+        $kluda = "Lietotājs netika atrasts!";
+    }
+}
+?>
+
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+    <meta charset="UTF-8">
+    <title>Pieslēgšanās — Viesnīcas pārvaldība</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+    <div class="login-hero">
+        <div class="login-card">
+            <h2>Pieslēgšanās sistēmai</h2>
+
+            <?php if ($kluda): ?>
+                <p class="error"><?php echo $kluda; ?></p>
+            <?php endif; ?>
+
+            <form method="POST" action="">
+                <label for="lietotajvards">Lietotājvārds</label>
+                <input type="text" name="lietotajvards" id="lietotajvards" required>
+
+                <label for="parole">Parole</label>
+                <input type="password" name="parole" id="parole" required>
+
+                <button type="submit" class="btn btn-primary">Ieiet</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
