@@ -42,19 +42,23 @@
         <div class="footer-col">
             <h4>Saites</h4>
             <ul class="footer-links">
-                <li><a href="index.php">Sākums</a></li>
-                <li><a href="about.php">Par mums</a></li>
-                <li><a href="gallery.php">Galerija</a></li>
-                <li><a href="clubs.php">Klubi</a></li>
-            </ul>
+    <li><a href="index.php">Sākums</a></li>
+    <li><a href="about.php">Par mums</a></li>
+    <li><a href="gallery.php">Galerija</a></li>
+    <li><a href="clubs.php">Klubi</a></li>
+    <li><a href="privatuma-politika.php">Privātuma politika</a></li>
+</ul>
+
         </div>
 
     </div>
 
     <!-- BOTTOM BAR -->
     <div class="footer-bottom">
-        Ceļa meklētāji © <?php echo date('Y'); ?>
-    </div>
+    Ceļa meklētāji © <?php echo date('Y'); ?> ·
+    <a href="privatuma-politika.php" style="color: inherit; text-decoration: underline;">Privātuma politika</a>
+</div>
+
 </footer>
 
 </body>
