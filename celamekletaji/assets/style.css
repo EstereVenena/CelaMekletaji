@@ -468,25 +468,6 @@ p{
     font-weight:1000;
 }
 
-.program-badge{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    white-space:nowrap;
-    flex:0 0 auto;
-
-    font-weight:1000;
-    font-size:clamp(.78rem, 1.1vw, .92rem);
-    padding:.35rem .75rem;
-    border-radius:999px;
-
-    background:rgba(244,196,48,.28);
-    border:1px solid rgba(244,196,48,.45);
-    color:#5a4300;
-
-    box-shadow:0 4px 10px rgba(0,0,0,.08);
-}
-
 /* =========================
    CAROUSEL (Aktualitātes)
    ========================= */
