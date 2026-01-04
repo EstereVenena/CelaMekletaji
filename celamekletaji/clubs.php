@@ -4,8 +4,9 @@ declare(strict_types=1);
 $lapa  = "Ceļa meklētāju klubi Latvijā";
 $title = "Klubi | Ceļa meklētāji";
 
+// NOTE: Linux hosting is case-sensitive. Use the exact folder name.
 require __DIR__ . "/assets/header.php";
-require __DIR__ . "/Data/clubs-data.php";
+require __DIR__ . "/Data/clubs-data.php"; // change to "/Data/clubs-data.php" if your folder is "Data"
 ?>
 
 <!-- Leaflet CSS -->
@@ -15,6 +16,23 @@ require __DIR__ . "/Data/clubs-data.php";
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
   crossorigin=""
 />
+
+<!-- Leaflet MarkerCluster CSS -->
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+/>
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
+/>
+
+<!-- Small page-specific tweaks (so you don't have to edit your big CSS right now) -->
+<style>
+  /* distance between closest cards and map */
+  .closest-list { margin-bottom: 2rem; }
+  .map-card { margin-top: 1.25rem; }
+</style>
 
 <section class="section section-alt">
   <div class="container">
@@ -40,6 +58,36 @@ require __DIR__ . "/Data/clubs-data.php";
       <div class="muted small" id="locStatus">Lokācija: nav ieslēgta</div>
     </div>
 
+    <!-- Manual location (fallback / override) -->
+    <div class="map-tools" style="margin-top:.25rem">
+      <div style="flex:1; min-width:260px;">
+        <label class="small muted" for="manualAddress"><strong>Ja lokācija nav pareiza:</strong> ievadi adresi</label>
+        <input
+          id="manualAddress"
+          type="text"
+          placeholder="Piem.: Latvija, Rīga, Brīvības iela 1"
+          style="width:100%; padding:.7rem .9rem; border-radius:14px; border:1px solid rgba(0,0,0,.12);"
+          autocomplete="street-address"
+        >
+      </div>
+
+      <button class="btn btn-outline btn-sm" id="addrBtn" type="button">
+        Meklēt adresi
+      </button>
+
+      <button class="btn btn-outline btn-sm" id="clearLocBtn" type="button" title="Atgriezties uz sākotnējo skatu">
+        Notīrīt
+      </button>
+    </div>
+
+    <!-- Address display -->
+    <div class="card" style="margin-top:1rem; padding:1rem;">
+      <div class="muted small">Izvēlētā lokācija</div>
+      <div id="addrLine" style="font-weight:1000; margin-top:.25rem;">
+        —
+      </div>
+    </div>
+
     <div class="closest-list" id="closestList" aria-live="polite"></div>
 
     <div class="map-card">
@@ -60,8 +108,8 @@ require __DIR__ . "/Data/clubs-data.php";
 </div>
 
 <?php
-// Put JSON into NON-JS script tags (bulletproof against </script> breaking JS)
-$clubsJson = json_encode($clubs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+// Bulletproof: keep JSON out of JS context so </script> can’t break anything
+$clubsJson    = json_encode($clubs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 ?>
 <script id="clubsData" type="application/json"><?php echo htmlspecialchars($clubsJson ?? '[]', ENT_NOQUOTES, 'UTF-8'); ?></script>
@@ -74,6 +122,9 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
   crossorigin=""
 ></script>
 
+<!-- Leaflet MarkerCluster JS -->
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
 <script>
 (function () {
   "use strict";
@@ -82,20 +133,12 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
   function readJsonScript(id, fallback) {
     const el = document.getElementById(id);
     if (!el) return fallback;
-    try {
-      return JSON.parse(el.textContent || "");
-    } catch (e) {
-      console.error("Failed to parse JSON from", id, e);
-      return fallback;
-    }
+    try { return JSON.parse(el.textContent || ""); }
+    catch (e) { console.error("Failed to parse JSON from", id, e); return fallback; }
   }
 
   const CLUBS = readJsonScript("clubsData", []);
   const PROGRAMS = readJsonScript("programsData", {});
-
-  if (!Array.isArray(CLUBS) || !CLUBS.length) {
-    console.warn("No clubs data found or invalid.");
-  }
 
   // ---------- Helpers ----------
   function escapeHtml(str) {
@@ -106,7 +149,6 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
   }
-
   function escapeAttr(str) {
     return String(str ?? "")
       .replaceAll("&", "&amp;")
@@ -115,7 +157,6 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
   }
-
   function isValidCoord(n) {
     return Number.isFinite(n) && Math.abs(n) > 0.000001;
   }
@@ -138,16 +179,13 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     });
   }
 
-  // compact hover list: icon + label
   function programsHTML(programCodes, { compact = false } = {}) {
     if (!Array.isArray(programCodes) || !programCodes.length) return "";
-
     const wrapClass = compact ? "tt-list tt-list--compact" : "tt-list";
 
     const items = programCodes.map(code => {
       const p = PROGRAMS[code];
       if (!p) return "";
-
       const icon = escapeAttr(p.icon || "");
       const label = escapeHtml(p.label || code);
 
@@ -165,7 +203,6 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     return `<div class="${wrapClass}">${items}</div>`;
   }
 
-  // Hover tooltip: ONLY name + programs (right side)
   function buildHoverHTML(c) {
     const title = escapeHtml(c.name || "Klubs");
     return `
@@ -176,10 +213,8 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     `;
   }
 
-  // Modal details
   function buildDetailsHTML(c) {
     const leader = c.leader || {};
-
     const title  = escapeHtml(c.name || "Klubs");
     const church = c.church ? escapeHtml(c.church) : "";
     const addr   = c.address ? escapeHtml(c.address) : "";
@@ -191,26 +226,21 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
       church ? `<div class="tt-muted">${church}</div>` : "",
       addr   ? `<div class="tt-muted">${addr}</div>` : "",
       leadN  ? `<div class="tt-muted"><strong>Vadītājs / MG:</strong> ${leadN}</div>` : "",
-      leadP  ? `<div class="tt-muted"><strong>Tel.:</strong> <a href="tel:${escapeAttr(leadP)}">${escapeHtml(leadP)}</a></div>` : "",
-      leadE  ? `<div class="tt-muted"><strong>E-pasts:</strong> <a href="mailto:${escapeAttr(leadE)}">${escapeHtml(leadE)}</a></div>` : ""
+      (leadP && leadP !== "N/A") ? `<div class="tt-muted"><strong>Tel.:</strong> <a href="tel:${escapeAttr(leadP)}">${escapeHtml(leadP)}</a></div>` : "",
+      (leadE && leadE !== "N/A") ? `<div class="tt-muted"><strong>E-pasts:</strong> <a href="mailto:${escapeAttr(leadE)}">${escapeHtml(leadE)}</a></div>` : ""
     ].filter(Boolean).join("");
 
     const hasCoords = isValidCoord(Number(c.lat)) && isValidCoord(Number(c.lng));
-    const gmaps = hasCoords
-      ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(c.lat + "," + c.lng)}`
-      : "";
+    const gmaps = hasCoords ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(c.lat + "," + c.lng)}` : "";
 
     return `
       <div class="club-details">
         <h3 id="clubModalTitle" class="club-details__title">${title}</h3>
-
         ${infoLines ? `<div class="club-details__meta">${infoLines}</div>` : ""}
-
         <div class="club-details__section">
           <div class="tt-sub" style="font-weight:900;margin:.25rem 0 .4rem">Programmas</div>
           ${programsHTML(c.programs || [], { compact: false })}
         </div>
-
         ${gmaps ? `
           <div class="club-details__actions">
             <a class="btn btn-outline btn-sm" href="${escapeAttr(gmaps)}" target="_blank" rel="noopener">Maršruts →</a>
@@ -228,13 +258,10 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
 
   function openModal(html) {
     lastFocusEl = document.activeElement;
-
     modalContent.innerHTML = html;
     modal.classList.add("is-open");
     modal.setAttribute("aria-hidden", "false");
-
     document.body.style.overflow = "hidden";
-
     const closeBtn = modal.querySelector("[data-close]");
     if (closeBtn) closeBtn.focus();
   }
@@ -244,7 +271,6 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     modal.setAttribute("aria-hidden", "true");
     modalContent.innerHTML = "";
     document.body.style.overflow = "";
-
     if (lastFocusEl && typeof lastFocusEl.focus === "function") lastFocusEl.focus();
     lastFocusEl = null;
   }
@@ -283,17 +309,22 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     attribution: "&copy; OpenStreetMap"
   }).addTo(map);
 
+  // MarkerCluster group
+  const cluster = L.markerClusterGroup({
+    showCoverageOnHover: false,
+    spiderfyOnMaxZoom: true,
+    disableClusteringAtZoom: 15
+  });
+
   const markerItems = [];
 
   CLUBS.forEach(c => {
     const lat = Number(c.lat);
     const lng = Number(c.lng);
-
-    // Skip invalid coords instead of placing marker at [0,0]
     if (!isValidCoord(lat) || !isValidCoord(lng)) return;
 
     const cls = primaryProgramClass(c.programs || []);
-    const m = L.marker([lat, lng], { icon: triangleIcon(cls) }).addTo(map);
+    const m = L.marker([lat, lng], { icon: triangleIcon(cls) });
 
     m.bindTooltip(buildHoverHTML(c), {
       direction: "right",
@@ -308,19 +339,65 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
       openModal(buildDetailsHTML(c));
     });
 
+    cluster.addLayer(m);
     markerItems.push({ club: c, marker: m });
   });
 
-  // ---------- Proximity ----------
-  let userLatLng = null;
-  let radiusKm = 50;
+  map.addLayer(cluster);
 
+  // ---------- Location + Geocoding (manual fallback) ----------
+  const addrLine = document.getElementById("addrLine");
   const locBtn = document.getElementById("locBtn");
+  const addrBtn = document.getElementById("addrBtn");
+  const clearLocBtn = document.getElementById("clearLocBtn");
+  const manualAddress = document.getElementById("manualAddress");
+
   const radiusEl = document.getElementById("radiusKm");
   const radiusLabel = document.getElementById("radiusLabel");
   const locStatus = document.getElementById("locStatus");
   const closestList = document.getElementById("closestList");
 
+  let userLatLng = null;
+  let radiusKm = 50;
+
+  let userMarker = null;
+
+  function setActivePoint(lat, lng, labelText) {
+    userLatLng = { lat, lng };
+
+    if (userMarker) { map.removeLayer(userMarker); userMarker = null; }
+
+    userMarker = L.circleMarker([lat, lng], {
+      radius: 7, weight: 2, opacity: 1, fillOpacity: 0.35
+    }).addTo(map).bindTooltip("Izvēlētā lokācija", { direction: "top" });
+
+    addrLine.textContent = labelText || "—";
+    map.panTo([lat, lng]);
+    applyProximity();
+  }
+
+  async function reverseGeocode(lat, lng) {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&zoom=18&addressdetails=1`;
+    const res = await fetch(url, { method: "GET" });
+    if (!res.ok) throw new Error("Reverse geocode failed");
+    const data = await res.json();
+    return data.display_name || "";
+  }
+
+  async function geocodeAddress(query) {
+    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=lv&q=${encodeURIComponent(query)}`;
+    const res = await fetch(url, { method: "GET" });
+    if (!res.ok) throw new Error("Geocode failed");
+    const list = await res.json();
+    if (!Array.isArray(list) || !list.length) return null;
+    return {
+      lat: Number(list[0].lat),
+      lng: Number(list[0].lon),
+      label: list[0].display_name || query
+    };
+  }
+
+  // ---------- Proximity ----------
   function distanceKm(aLat, aLng, bLat, bLng) {
     const R = 6371;
     const dLat = (bLat - aLat) * Math.PI / 180;
@@ -351,7 +428,9 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
 
     results.forEach(r => setMarkerNear(r.marker, r.d <= radiusKm));
 
-    const top = results.slice(0, 5);
+    // ✅ ONLY 4 closest (not 5)
+    const top = results.slice(0, 4);
+
     closestList.innerHTML = top.map(r => {
       const gmaps = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(r.club.lat + "," + r.club.lng)}`;
       return `
@@ -374,9 +453,7 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
   }
   radiusEl.addEventListener("input", updateRadius);
 
-  let userMarker = null;
-
-  function requestLocation() {
+  async function requestLocation() {
     if (!window.isSecureContext) {
       locStatus.textContent = "Lokācija strādā tikai ar HTTPS.";
       return;
@@ -389,21 +466,19 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     locStatus.textContent = "Meklēju lokāciju…";
 
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        userLatLng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+
         locStatus.textContent = `Lokācija ieslēgta (precizitāte ~${Math.round(pos.coords.accuracy)} m)`;
 
-        if (userMarker) map.removeLayer(userMarker);
+        let label = `Koordinātes: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        try {
+          const addr = await reverseGeocode(lat, lng);
+          if (addr) label = addr;
+        } catch (e) {}
 
-        userMarker = L.circleMarker([userLatLng.lat, userLatLng.lng], {
-          radius: 7,
-          weight: 2,
-          opacity: 1,
-          fillOpacity: 0.35
-        }).addTo(map).bindTooltip("Tu esi šeit", { direction: "top" });
-
-        map.panTo([userLatLng.lat, userLatLng.lng]);
-        applyProximity();
+        setActivePoint(lat, lng, label);
       },
       (err) => {
         let msg = "Lokācija nav pieejama.";
@@ -411,13 +486,57 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
         if (err.code === 2) msg = "Lokācija nav pieejama (position unavailable).";
         if (err.code === 3) msg = "Lokācijas pieprasījums noilgts (timeout).";
         locStatus.textContent = msg;
-        console.warn("Geolocation error:", err);
       },
       { enableHighAccuracy: false, timeout: 12000, maximumAge: 60000 }
     );
   }
 
+  async function useManualAddress() {
+    const q = (manualAddress.value || "").trim();
+    if (!q) {
+      locStatus.textContent = "Ievadi adresi (piem. Latvija, Rīga, Brīvības iela 1).";
+      manualAddress.focus();
+      return;
+    }
+
+    locStatus.textContent = "Meklēju adresi…";
+    try {
+      const hit = await geocodeAddress(q);
+      if (!hit || !isValidCoord(hit.lat) || !isValidCoord(hit.lng)) {
+        locStatus.textContent = "Adrese netika atrasta. Pamēģini precīzāk (pilsēta + iela + nr.).";
+        return;
+      }
+
+      locStatus.textContent = "Adrese atrasta. Rēķinu tuvākos klubus…";
+      setActivePoint(hit.lat, hit.lng, hit.label || q);
+
+      map.setView([hit.lat, hit.lng], 12);
+    } catch (e) {
+      console.error(e);
+      locStatus.textContent = "Neizdevās meklēt adresi. Pamēģini vēlreiz.";
+    }
+  }
+
+  function clearLocation() {
+    userLatLng = null;
+    addrLine.textContent = "—";
+    locStatus.textContent = "Lokācija: nav ieslēgta";
+    closestList.innerHTML = "";
+
+    markerItems.forEach(it => setMarkerNear(it.marker, false));
+
+    if (userMarker) { map.removeLayer(userMarker); userMarker = null; }
+
+    map.setView([56.8796, 24.6032], 7);
+  }
+
   locBtn.addEventListener("click", requestLocation);
+  addrBtn.addEventListener("click", useManualAddress);
+  clearLocBtn.addEventListener("click", clearLocation);
+
+  manualAddress.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") useManualAddress();
+  });
 
 })();
 </script>
