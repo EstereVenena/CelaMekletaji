@@ -1,3 +1,47 @@
+<?php
+session_start();
+require_once "assets/database.php";
+
+$kluda = "";
+
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+
+    $login = trim($_POST["lietotajvards"]);
+    $parole = $_POST["parole"];
+
+    $sql = "
+        SELECT lietotajs_id, lietotajvards, parole, loma, statuss
+        FROM cm_lietotaji
+        WHERE (lietotajvards = ? OR epasts = ?)
+        LIMIT 1
+    ";
+
+    $stmt = $savienojums->prepare($sql);
+    $stmt->bind_param("ss", $login, $login);
+    $stmt->execute();
+    $rez = $stmt->get_result();
+
+    if ($rez->num_rows === 1) {
+        $lietotajs = $rez->fetch_assoc();
+
+        if ($lietotajs["statuss"] !== "aktīvs") {
+            $kluda = "Konts nav apstiprināts";
+        } elseif (password_verify($parole, $lietotajs["parole"])) {
+
+            $_SESSION["lietotajs_id"] = $lietotajs["lietotajs_id"];
+            $_SESSION["lietotajvards"] = $lietotajs["lietotajvards"];
+            $_SESSION["loma"] = $lietotajs["loma"];
+
+            header("Location: dashboard.php");
+            exit;
+        } else {
+            $kluda = "Nepareiza parole";
+        }
+    } else {
+        $kluda = "Lietotājs netika atrasts";
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="lv">
 <head>
@@ -9,109 +53,54 @@
 <body>
 
 <main class="login-page">
-
     <div class="login-card">
 
-        <!-- Virsraksts augšā -->
         <div class="login-title">
             <h1>CEĻA MEKLĒTĀJI</h1>
         </div>
 
-        <!-- Logo -->
         <div class="login-logo">
             <img src="images/logo.png" alt="Ceļa meklētāji logo">
         </div>
 
-        <!-- Forma -->
-        <form class="login-form">
-            <input type="text" placeholder="E-pasts vai lietotājvārds">
-            
+        <?php if (!empty($kluda)): ?>
+            <p class="error"><?= htmlspecialchars($kluda) ?></p>
+        <?php endif; ?>
+
+        <form class="login-form" method="POST">
+            <input
+                type="text"
+                name="lietotajvards"
+                placeholder="E-pasts vai lietotājvārds"
+                required
+            >
+
             <div class="password-field">
-                <input type="password" placeholder="Parole">
+                <input
+                    type="password"
+                    name="parole"
+                    placeholder="Parole"
+                    required
+                >
                 <span class="eye">👁</span>
             </div>
 
-            <button class="btn">Pieslēgties</button>
+            <button type="submit" class="btn">Pieslēgties</button>
 
-            <a href="index.html" class="btn outline">
+            <a href="index.php" class="btn outline">
                 Doties uz sākumlapu
+            </a>
+            <a href="register.php" class="btn outline">
+                Reģistrēties
             </a>
         </form>
 
-        <!-- Apakša -->
         <p class="login-footer">
             Ceļa meklētāji © 2026
         </p>
 
     </div>
-
 </main>
 
-</body>
-</html>
-
-
-
-
-
-
-<?php
-session_start();
-require_once("../database.php");
-
-$kluda = "";
-
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $lietotajvards = $_POST['lietotajvards'];
-    $parole = $_POST['parole'];
-
-    $sql = "SELECT * FROM viesnicas_darbinieki WHERE lietotajvards = ?";
-    $stmt = $savienojums->prepare($sql);
-    $stmt->bind_param("s", $lietotajvards);
-    $stmt->execute();
-    $rezultats = $stmt->get_result();
-
-    if ($rezultats->num_rows === 1) {
-        $lietotajs = $rezultats->fetch_assoc();
-        if (password_verify($parole, $lietotajs['parole'])) {
-            $_SESSION['lietotajvards'] = $lietotajvards;
-            header("Location: index.php");
-            exit();
-        } else {
-            $kluda = "Nepareiza parole!";
-        }
-    } else {
-        $kluda = "Lietotājs netika atrasts!";
-    }
-}
-?>
-
-<!DOCTYPE html>
-<html lang="lv">
-<head>
-    <meta charset="UTF-8">
-    <title>Pieslēgšanās — Viesnīcas pārvaldība</title>
-    <link rel="stylesheet" href="../style.css">
-</head>
-<body>
-    <div class="login-hero">
-        <div class="login-card">
-            <h2>Pieslēgšanās sistēmai</h2>
-
-            <?php if ($kluda): ?>
-                <p class="error"><?php echo $kluda; ?></p>
-            <?php endif; ?>
-
-            <form method="POST" action="">
-                <label for="lietotajvards">Lietotājvārds</label>
-                <input type="text" name="lietotajvards" id="lietotajvards" required>
-
-                <label for="parole">Parole</label>
-                <input type="password" name="parole" id="parole" required>
-
-                <button type="submit" class="btn btn-primary">Ieiet</button>
-            </form>
-        </div>
-    </div>
 </body>
 </html>

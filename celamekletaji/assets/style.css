@@ -883,6 +883,7 @@ p{
 /* Closest list */
 .closest-list{
     margin-top: 1rem;
+    margin-bottom: 2rem; /* ✅ space between cards and map */
     display:grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 1rem;
@@ -894,6 +895,12 @@ p{
     border-radius: var(--radius-sm);
     box-shadow: var(--shadow-sm);
     padding: 1rem;
+    cursor: pointer; /* ✅ clickable vibe */
+}
+
+.closest-card:hover{
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
 }
 
 .closest-card h4{
@@ -917,22 +924,28 @@ p{
     background: transparent !important;
     border: none !important;
 }
+
+/* ✅ Default = RED markers for visibility */
 .tri-marker .tri{
     display:block;
     width:0;
     height:0;
     border-left:11px solid transparent;
     border-right:11px solid transparent;
-    border-top:18px solid rgba(120, 30, 30, .85);
+    border-top:18px solid rgba(211, 47, 47, .92); /* RED */
     filter: drop-shadow(0 8px 12px rgba(0,0,0,.22));
     transform: translateY(2px);
 }
 
-/* Optional: per-program colors */
+/* ✅ Keep per-program colors OFF (you wanted red for visibility)
+   If you ever want them back, uncomment these:
+*/
+/*
 .tri-marker.cm .tri{ border-top-color: rgba(30,79,161,.92); }
 .tri-marker.pm .tri{ border-top-color: rgba(244,196,48,.92); }
 .tri-marker.mg .tri{ border-top-color: rgba(40,140,80,.92); }
 .tri-marker.v  .tri{ border-top-color: rgba(198,40,40,.92); }
+*/
 
 /* Proximity highlight */
 .tri-marker.is-far{ filter: grayscale(0.85) opacity(0.55); }
@@ -940,6 +953,23 @@ p{
 .tri-marker.is-near .tri{
     filter: drop-shadow(0 10px 16px rgba(0,0,0,.30));
     border-top-width: 20px;
+}
+
+/* ✅ Closest marker = BLUE */
+.tri-marker.is-closest .tri{
+    border-top-color: rgba(25,118,210,.95); /* BLUE */
+    border-top-width: 22px;
+    filter: drop-shadow(0 12px 18px rgba(0,0,0,.35));
+}
+
+/* ✅ Hover-highlight pulse */
+@keyframes markerPulse {
+  0%   { transform: translateY(2px) scale(1);    filter: drop-shadow(0 8px 12px rgba(0,0,0,.22)); }
+  50%  { transform: translateY(-2px) scale(1.15); filter: drop-shadow(0 14px 22px rgba(0,0,0,.35)); }
+  100% { transform: translateY(2px) scale(1);    filter: drop-shadow(0 8px 12px rgba(0,0,0,.22)); }
+}
+.tri-marker.is-highlight .tri{
+    animation: markerPulse .75s ease-in-out infinite;
 }
 
 /* Tooltip wrapper we set in JS: className: "club-tooltip-wrap ..." */

@@ -1,0 +1,253 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap');
+
+:root {
+    --white: #ffffff;
+
+    /* Akcenta krāsas */
+    --red: #c62828;
+    --yellow: #f4c430;
+
+    /* Semantiskie foni */
+    --bgBlue: #1e4fa1;
+    --bgMidleBlue: #b2bbd6;
+    --bgLightB: #e8edfb;
+
+    /* Teksts */
+    --text: #1e1e1e;
+
+    /* Interakcijas */
+    --hover: var(--yellow);
+    --btn: var(--bgLightB);
+
+    --border: .1rem solid rgba(0,0,0,.08);
+    --box-shadow: 0 .5rem 1rem rgba(0,0,0,.08);
+}
+
+/* RESET */
+* {
+    font-family: 'Nunito', sans-serif;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    outline: none;
+    border: none;
+    text-decoration: none;
+
+    transition:
+        color .2s linear,
+        background-color .2s linear,
+        transform .2s linear,
+        box-shadow .2s linear;
+}
+
+body {
+    color: var(--text);
+    background: var(--bgMidleBlue);
+}
+
+html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 7.5rem;
+}
+
+/* ======= GENERAL ======= */
+h1, h2 {
+    color: var(--text);
+    text-align: center;
+}
+
+p {
+    color: var(--text);
+    font-size: 1.2rem;
+    line-height: 1.8rem;
+}
+
+span {
+    text-align: center;
+    background: var(--bgLightB);
+    padding: .5rem;
+    box-shadow: var(--box-shadow);
+    border-radius: .5rem;
+}
+
+/* ======= BOX ======= */
+.box {
+    display: flex;
+    flex-direction: column;
+    gap: .6rem;
+    margin: 1rem;
+    padding: 1rem;
+    background: var(--bgLightB);
+    border: var(--border);
+    box-shadow: var(--box-shadow);
+    text-align: center;
+    align-items: center;
+    border-radius: .5rem;
+}
+
+.box-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(25rem, 1fr));
+    gap: 1rem;
+}
+
+/* ======= HEADER ======= */
+.prof-header {
+    background: var(--bgBlue);
+    padding: 1rem 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: auto;
+}
+
+.logo {
+    height: 5rem;
+}
+
+.header-title {
+    color: var(--white);
+    font-size: 2rem;
+    font-weight: 800;
+    text-align: center;
+}
+
+/* ======= NAV ======= */
+.main-nav {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.nav-link {
+    color: var(--white);
+    font-size: 1.2rem;
+}
+
+.nav-link:hover {
+    background: var(--hover);
+    padding: .5rem;
+    border-radius: .5rem;
+}
+
+#menu-btn {
+    display: none;
+    background: var(--bgLightB);
+    color: var(--bgBlue);
+    font-size: 2.5rem;
+    padding: .3rem;
+    border-radius: .5rem;
+    cursor: pointer;
+}
+
+/* ======= BUTTONS ======= */
+.btn {
+    background: var(--btn);
+    color: var(--text);
+    padding: .5rem 2rem;
+    box-shadow: var(--box-shadow);
+    border-radius: .5rem;
+}
+
+.btn:hover {
+    background: var(--hover);
+}
+
+/* ======= FOOTER ======= */
+footer {
+    background: var(--bgBlue);
+    color: var(--white);
+    text-align: center;
+    padding: 2rem;
+}
+
+/* ======= LOGIN ======= */
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: var(--bgLightB);
+}
+
+.login-card {
+    background: var(--white);
+    max-width: 420px;
+    width: 100%;
+    padding: 2.5rem;
+    border-radius: 1rem;
+    border: 2px solid var(--bgBlue);
+    box-shadow: var(--box-shadow);
+    text-align: center;
+}
+
+.login-title h1 {
+    color: var(--bgBlue);
+}
+
+.login-form input:focus {
+    border-color: var(--bgBlue);
+}
+
+.login-form .btn:hover {
+    background: var(--bgBlue);
+    color: var(--white);
+}
+
+.login-form .btn.outline {
+    background: transparent;
+    color: var(--bgBlue);
+    border: 2px solid var(--bgBlue);
+}
+
+.login-form .btn.outline:hover {
+    background: var(--bgBlue);
+    color: var(--white);
+}
+
+/* ======= ADMIN SIDEBAR ======= */
+.sidebar {
+    width: 17rem;
+    background: var(--bgBlue);
+    height: 100%;
+    position: fixed;
+    padding: 1rem;
+}
+
+.sidebar .nav-link {
+    color: var(--white);
+    font-weight: 800;
+}
+
+/* ======= GALLERY ======= */
+.gallery-item {
+    border-radius: .5rem;
+    overflow: hidden;
+    box-shadow: var(--box-shadow);
+}
+
+/* ======= RESPONSIVE ======= */
+@media (max-width: 768px) {
+    html { font-size: 55%; }
+
+    .main-nav { display: none; }
+
+    #menu-btn {
+        display: block;
+    }
+}
+
+.map-wrapper {
+    position: relative;
+    height: 520px;
+    background: #e6ebf5 url("img/latvia_map.png") center/contain no-repeat;
+    border-radius: 16px;
+    box-shadow: 0 15px 40px rgba(0,0,0,.15);
+    overflow: hidden;
+}
