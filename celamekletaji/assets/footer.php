@@ -42,11 +42,11 @@
         <div class="footer-col">
             <h4>Saites</h4>
             <ul class="footer-links">
-    <li><a href="index.php">Sākums</a></li>
-    <li><a href="about.php">Par mums</a></li>
-    <li><a href="gallery.php">Galerija</a></li>
-    <li><a href="clubs.php">Klubi</a></li>
-    <li><a href="privatuma-politika.php">Privātuma politika</a></li>
+    <li><a href="/celamekletaji/index.php">Sākums</a></li>
+    <li><a href="/celamekletaji/about.php">Par mums</a></li>
+    <li><a href="/celamekletaji/gallery.php">Galerija</a></li>
+    <li><a href="/celamekletaji/clubs.php">Klubi</a></li>
+    <li><a href="/celamekletaji/privatuma-politika.php">Privātuma politika</a></li>
 </ul>
 
         </div>

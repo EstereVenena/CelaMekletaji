@@ -1,0 +1,50 @@
+[01-Feb-2026 17:03:27 Europe/Riga] PHP Warning:  require(dashboards/user.php): Failed to open stream: No such file or directory in /home/grobina1/public_html/4pt/venena/celamekletaji/dashboard.php on line 19
+[01-Feb-2026 17:03:27 Europe/Riga] PHP Fatal error:  Uncaught Error: Failed opening required 'dashboards/user.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/grobina1/public_html/4pt/venena/celamekletaji/dashboard.php:19
+Stack trace:
+#0 {main}
+  thrown in /home/grobina1/public_html/4pt/venena/celamekletaji/dashboard.php on line 19
+[02-Feb-2026 13:22:55 Europe/Riga] PHP Warning:  require(dashboards/user.php): Failed to open stream: No such file or directory in /home/grobina1/public_html/4pt/venena/celamekletaji/dashboard.php on line 19
+[02-Feb-2026 13:22:55 Europe/Riga] PHP Fatal error:  Uncaught Error: Failed opening required 'dashboards/user.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/grobina1/public_html/4pt/venena/celamekletaji/dashboard.php:19
+Stack trace:
+#0 {main}
+  thrown in /home/grobina1/public_html/4pt/venena/celamekletaji/dashboard.php on line 19
+[02-Feb-2026 13:33:22 Europe/Riga] PHP Warning:  require(dashboards/user.php): Failed to open stream: No such file or directory in /home/grobina1/public_html/4pt/venena/celamekletaji/dashboard.php on line 19
+[02-Feb-2026 13:33:22 Europe/Riga] PHP Fatal error:  Uncaught Error: Failed opening required 'dashboards/user.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/grobina1/public_html/4pt/venena/celamekletaji/dashboard.php:19
+Stack trace:
+#0 {main}
+  thrown in /home/grobina1/public_html/4pt/venena/celamekletaji/dashboard.php on line 19
+[02-Feb-2026 13:33:29 Europe/Riga] PHP Warning:  require(dashboards/user.php): Failed to open stream: No such file or directory in /home/grobina1/public_html/4pt/venena/celamekletaji/dashboard.php on line 19
+[02-Feb-2026 13:33:29 Europe/Riga] PHP Fatal error:  Uncaught Error: Failed opening required 'dashboards/user.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/grobina1/public_html/4pt/venena/celamekletaji/dashboard.php:19
+Stack trace:
+#0 {main}
+  thrown in /home/grobina1/public_html/4pt/venena/celamekletaji/dashboard.php on line 19
+[02-Feb-2026 13:35:46 Europe/Riga] PHP Warning:  require(/home/grobina1/public_html/4pt/venena/celamekletaji/dashboards/user.php): Failed to open stream: No such file or directory in /home/grobina1/public_html/4pt/venena/celamekletaji/dashboard.php on line 19
+[02-Feb-2026 13:35:46 Europe/Riga] PHP Fatal error:  Uncaught Error: Failed opening required '/home/grobina1/public_html/4pt/venena/celamekletaji/dashboards/user.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/grobina1/public_html/4pt/venena/celamekletaji/dashboard.php:19
+Stack trace:
+#0 {main}
+  thrown in /home/grobina1/public_html/4pt/venena/celamekletaji/dashboard.php on line 19
+[09-Feb-2026 18:49:08 Europe/Riga] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'programm' in 'SELECT' in /home/grobina1/public_html/4pt/venena/celamekletaji/index.php:37
+Stack trace:
+#0 /home/grobina1/public_html/4pt/venena/celamekletaji/index.php(37): mysqli->query()
+#1 {main}
+  thrown in /home/grobina1/public_html/4pt/venena/celamekletaji/index.php on line 37
+[12-Feb-2026 20:31:25 Europe/Riga] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'programm' in 'SELECT' in /home/grobina1/public_html/4pt/venena/celamekletaji/index.php:37
+Stack trace:
+#0 /home/grobina1/public_html/4pt/venena/celamekletaji/index.php(37): mysqli->query()
+#1 {main}
+  thrown in /home/grobina1/public_html/4pt/venena/celamekletaji/index.php on line 37
+[15-Feb-2026 20:11:18 Europe/Riga] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'programm' in 'SELECT' in /home/grobina1/public_html/4pt/venena/celamekletaji/index.php:37
+Stack trace:
+#0 /home/grobina1/public_html/4pt/venena/celamekletaji/index.php(37): mysqli->query()
+#1 {main}
+  thrown in /home/grobina1/public_html/4pt/venena/celamekletaji/index.php on line 37
+[16-Feb-2026 12:35:57 Europe/Riga] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'programm' in 'SELECT' in /home/grobina1/public_html/4pt/venena/celamekletaji/index.php:37
+Stack trace:
+#0 /home/grobina1/public_html/4pt/venena/celamekletaji/index.php(37): mysqli->query()
+#1 {main}
+  thrown in /home/grobina1/public_html/4pt/venena/celamekletaji/index.php on line 37
+[16-Feb-2026 12:36:01 Europe/Riga] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'programm' in 'SELECT' in /home/grobina1/public_html/4pt/venena/celamekletaji/index.php:37
+Stack trace:
+#0 /home/grobina1/public_html/4pt/venena/celamekletaji/index.php(37): mysqli->query()
+#1 {main}
+  thrown in /home/grobina1/public_html/4pt/venena/celamekletaji/index.php on line 37

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $title; ?></title>
 
-    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="/celamekletaji/assets/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 </head>
 <body>
@@ -14,9 +14,9 @@
     <div class="header-container">
 
         <!-- Brand block: whole thing clickable to home -->
-        <a href="index.php" class="brand-block" aria-label="Uz sākumu">
+        <a href="/celamekletaji/index.php" class="brand-block" aria-label="Uz sākumu">
             <div class="brand-logo">
-                <img src="images/logo.png" class="logo" alt="Ceļa meklētāji">
+                <img src="/celamekletaji/images/logo.png" class="logo" alt="Ceļa meklētāji">
             </div>
             <div class="brand-meta">
                 <div class="brand-name">Ceļa meklētāji</div>
@@ -28,11 +28,11 @@
         <h1 class="header-title"><?php echo $lapa; ?></h1>
 
         <nav class="main-nav" id="mainNav" aria-label="Galvenā navigācija">
-            <a href="about.php" class="nav-link">Par mums</a>
-            <a href="gallery.php" class="nav-link">Galerija</a>
-            <a href="clubs.php" class="nav-link">Klubi</a>
+            <a href="/celamekletaji/about.php" class="nav-link">Par mums</a>
+            <a href="/celamekletaji/gallery.php" class="nav-link">Galerija</a>
+            <a href="/celamekletaji/clubs.php" class="nav-link">Klubi</a>
 
-            <a href="login.php" class="nav-link nav-cta" aria-label="Profils / Pievienoties">
+            <a href="/celamekletaji/login.php" class="nav-link nav-cta" aria-label="Profils / Pievienoties">
                 <i class="fas fa-user"></i>
                 <span class="nav-cta-text">Pievienoties</span>
             </a>
