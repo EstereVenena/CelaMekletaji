@@ -2,6 +2,20 @@
     $lapa = "Ceļa meklētāju galerija";
     $title = "Galerija | Ceļa meklētāji";
     require "assets/header.php";
+    require_once "assets/database.php";
+
+    $sort = $_GET['sort'] ?? 'upload_date';
+    $order = 'DESC';
+    if ($sort == 'year') $order = 'ASC';
+
+    $images = [];
+    $sql = "SELECT id, filename, path, year, creator, category FROM cm_gallery_images ORDER BY $sort $order";
+    $result = $savienojums->query($sql);
+    if ($result) {
+        while ($row = $result->fetch_assoc()) {
+            $images[] = $row;
+        }
+    }
 ?>
 
 <section class="section">
@@ -9,28 +23,21 @@
         <header class="section-title">
             <h2>Galerija</h2>
             <p class="muted">Atmiņas pa gadiem — uzklikšķini, lai atvērtu pilnā izmērā.</p>
+            <div class="sort-options" style="margin-top: 1rem;">
+                <a href="?sort=upload_date" class="btn btn-outline btn-sm">Jaunākie</a>
+                <a href="?sort=year" class="btn btn-outline btn-sm">Pēc gada</a>
+                <a href="?sort=creator" class="btn btn-outline btn-sm">Pēc autora</a>
+                <a href="?sort=category" class="btn btn-outline btn-sm">Pēc kategorijas</a>
+            </div>
         </header>
 
         <div class="gallery-grid" id="galleryGrid">
-            <button class="gallery-card" type="button" data-full="images/2020.jpg" data-caption="2020">
-                <img src="images/2020.jpg" alt="2020">
-                <span class="gallery-badge">2020</span>
-            </button>
-
-            <button class="gallery-card" type="button" data-full="images/2021.jpg" data-caption="2021">
-                <img src="images/2021.jpg" alt="2021">
-                <span class="gallery-badge">2021</span>
-            </button>
-
-            <button class="gallery-card" type="button" data-full="images/2022.jpg" data-caption="2022">
-                <img src="images/2022.jpg" alt="2022">
-                <span class="gallery-badge">2022</span>
-            </button>
-
-            <button class="gallery-card" type="button" data-full="images/2023.jpg" data-caption="2023">
-                <img src="images/2023.jpg" alt="2023">
-                <span class="gallery-badge">2023</span>
-            </button>
+            <?php foreach ($images as $img): ?>
+                <button class="gallery-card" type="button" data-full="<?= htmlspecialchars($img['path']) ?>" data-caption="<?= htmlspecialchars($img['year'] . ' - ' . $img['creator'] . ' (' . $img['category'] . ')') ?>">
+                    <img src="<?= htmlspecialchars($img['path']) ?>" alt="<?= htmlspecialchars($img['filename']) ?>">
+                    <span class="gallery-badge"><?= htmlspecialchars($img['year']) ?></span>
+                </button>
+            <?php endforeach; ?>
         </div>
     </div>
 </section>

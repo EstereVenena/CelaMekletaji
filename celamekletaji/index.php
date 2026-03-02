@@ -28,11 +28,18 @@ if ($result) {
 ================================ */
 $clubs = [];
 $clubsSql = "
-    SELECT id, name, address, programm
-FROM cm_clubs
-WHERE is_active = 1
-ORDER BY address
-LIMIT 4
+    SELECT 
+        c.id,
+        c.name,
+        c.address,
+        GROUP_CONCAT(p.label SEPARATOR ', ') AS programs
+    FROM cm_clubs c
+    LEFT JOIN cm_club_programs cp ON c.id = cp.club_id
+    LEFT JOIN cm_programs p ON cp.program_id = p.id
+    WHERE c.is_active = 1
+    GROUP BY c.id
+    ORDER BY c.address
+    LIMIT 4
 ";
 $result = $savienojums->query($clubsSql);
 if ($result) {
@@ -177,7 +184,7 @@ if ($result) {
         <h3><?= htmlspecialchars($club['name']) ?></h3>
 
         <span class="badge badge-gold">
-            <?= htmlspecialchars($club['programm']) ?>
+            <?= htmlspecialchars($club['programs'] ?? 'Nav programmas') ?>
         </span>
 
         <a class="link" href="clubs.php?id=<?= $club['id'] ?>">
