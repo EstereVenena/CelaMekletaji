@@ -31,6 +31,7 @@
             <a href="index.php" class="nav-link">Sākums</a>
             <a href="news_manage.php" class="nav-link">Ziņas</a>
             <a href="clubs_manage.php" class="nav-link">Klubi</a>
+            <a href="gallery.php" class="nav-link">Galerija</a>
             <a href="users_manage.php" class="nav-link">Lietotāji</a>
             <a href="../index.php" class="nav-link nav-cta" aria-label="Iziet">
                 <i class="fas fa-sign-out-alt"></i>
