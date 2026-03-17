@@ -2,8 +2,9 @@
 $lapa  = "Ceļa meklētāji";
 $title = "Ceļa meklētāji";
 
-require "assets/header.php";
-require_once "assets/database.php";
+// Fixed paths
+require "includes/templates/header.php";
+require_once "includes/config/database.php";
 
 /* ===============================
    AKTUALITĀTES
@@ -59,8 +60,8 @@ if ($result) {
                     Bērnu un jauniešu programmas visā Latvijā — piedzīvojumi, prasmes, draudzība un vērtības.
                 </p>
                 <div class="hero-actions">
-                    <a class="btn btn-primary" href="about.php">Uzzināt par programmām</a>
-                    <a class="btn btn-outline" href="clubs.php">Atrast klubu</a>
+                    <a class="btn btn-primary" href="public/about.php">Uzzināt par programmām</a>
+                    <a class="btn btn-outline" href="public/clubs.php">Atrast klubu</a>
                 </div>
             </div>
         </div>
@@ -75,7 +76,7 @@ if ($result) {
                 <h2>Aktualitātes</h2>
                 <p class="muted">Jaunākie notikumi, nometnes un projekti.</p>
             </div>
-            <a class="btn btn-outline btn-sm" href="news.php">
+            <a class="btn btn-outline btn-sm" href="public/news.php">
                 Skatīt visas <i class="fa-solid fa-angles-right"></i>
             </a>
         </header>
@@ -100,7 +101,7 @@ if ($result) {
                                     <?= htmlspecialchars($item['description']) ?>
                                 </p>
                                 <div class="news-actions">
-                                    <a href="news.php?id=<?= $item['id'] ?>"
+                                    <a href="public/news.php?id=<?= $item['id'] ?>"
                                        class="btn btn-primary btn-sm">
                                         Lasīt
                                     </a>
@@ -157,7 +158,7 @@ if ($result) {
             </div>
 
             <div style="margin-top:1.25rem;text-align:center;">
-                <a class="btn btn-outline" href="about.php">Lasīt vairāk</a>
+                <a class="btn btn-outline" href="public/about.php">Lasīt vairāk</a>
             </div>
         </div>
     </div>
@@ -171,7 +172,7 @@ if ($result) {
                 <h2>Klubi Latvijā</h2>
                 <p class="muted">Atrodi tuvāko klubu un pievienojies.</p>
             </div>
-            <a class="btn btn-outline btn-sm" href="clubs.php">
+            <a class="btn btn-outline btn-sm" href="public/clubs.php">
                 Skatīt visus <i class="fa-solid fa-angles-right"></i>
             </a>
         </header>
@@ -187,7 +188,7 @@ if ($result) {
             <?= htmlspecialchars($club['programs'] ?? 'Nav programmas') ?>
         </span>
 
-        <a class="link" href="clubs.php?id=<?= $club['id'] ?>">
+        <a class="link" href="public/clubs.php?id=<?= $club['id'] ?>">
             Apskatīt →
         </a>
     </div>
@@ -203,4 +204,4 @@ if ($result) {
     </div>
 </section>
 
-<?php require "assets/footer.php"; ?>
+<?php require "includes/templates/footer.php"; ?> <!-- Fixed this line -->
