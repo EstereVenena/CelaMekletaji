@@ -3,10 +3,10 @@ declare(strict_types=1);
 
 $lapa  = "Ceļa meklētāju klubi Latvijā";
 $title = "Klubi | Ceļa meklētāji";
+$selectedClubId = isset($_GET['id']) ? (string)$_GET['id'] : '';
 
-// NOTE: Linux hosting is case-sensitive. Use the exact folder name.
-require __DIR__ . "/assets/header.php";
-require __DIR__ . "/Data/clubs-data.php"; // change to "/Data/clubs-data.php" if your folder is "Data"
+require __DIR__ . "/../includes/templates/header.php";
+require __DIR__ . "/../data/clubs-data.php";
 ?>
 
 <!-- Leaflet CSS -->
@@ -27,9 +27,7 @@ require __DIR__ . "/Data/clubs-data.php"; // change to "/Data/clubs-data.php" if
   href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
 />
 
-<!-- Small page-specific tweaks (so you don't have to edit your big CSS right now) -->
 <style>
-  /* distance between closest cards and map */
   .closest-list { margin-bottom: 2rem; }
   .map-card { margin-top: 1.25rem; }
 </style>
@@ -58,7 +56,6 @@ require __DIR__ . "/Data/clubs-data.php"; // change to "/Data/clubs-data.php" if
       <div class="muted small" id="locStatus">Lokācija: nav ieslēgta</div>
     </div>
 
-    <!-- Manual location (fallback / override) -->
     <div class="map-tools" style="margin-top:.25rem">
       <div style="flex:1; min-width:260px;">
         <label class="small muted" for="manualAddress"><strong>Ja lokācija nav pareiza:</strong> ievadi adresi</label>
@@ -80,7 +77,6 @@ require __DIR__ . "/Data/clubs-data.php"; // change to "/Data/clubs-data.php" if
       </button>
     </div>
 
-    <!-- Address display -->
     <div class="card" style="margin-top:1rem; padding:1rem;">
       <div class="muted small">Izvēlētā lokācija</div>
       <div id="addrLine" style="font-weight:1000; margin-top:.25rem;">
@@ -97,7 +93,6 @@ require __DIR__ . "/Data/clubs-data.php"; // change to "/Data/clubs-data.php" if
   </div>
 </section>
 
-<!-- Modal (details) -->
 <div class="cm-modal" id="clubModal" aria-hidden="true">
   <div class="cm-modal__backdrop" data-close></div>
 
@@ -108,12 +103,12 @@ require __DIR__ . "/Data/clubs-data.php"; // change to "/Data/clubs-data.php" if
 </div>
 
 <?php
-// Bulletproof: keep JSON out of JS context so </script> can’t break anything
-$clubsJson    = json_encode($clubs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+$clubsJson = json_encode($clubs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 ?>
 <script id="clubsData" type="application/json"><?php echo htmlspecialchars($clubsJson ?? '[]', ENT_NOQUOTES, 'UTF-8'); ?></script>
 <script id="programsData" type="application/json"><?php echo htmlspecialchars($programsJson ?? '{}', ENT_NOQUOTES, 'UTF-8'); ?></script>
+<script id="selectedClubId" type="application/json"><?php echo json_encode($selectedClubId, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?></script>
 
 <!-- Leaflet JS -->
 <script
@@ -129,18 +124,20 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
 (function () {
   "use strict";
 
-  // ---------- Safe JSON read ----------
   function readJsonScript(id, fallback) {
     const el = document.getElementById(id);
     if (!el) return fallback;
     try { return JSON.parse(el.textContent || ""); }
-    catch (e) { console.error("Failed to parse JSON from", id, e); return fallback; }
+    catch (e) {
+      console.error("Failed to parse JSON from", id, e);
+      return fallback;
+    }
   }
 
   const CLUBS = readJsonScript("clubsData", []);
   const PROGRAMS = readJsonScript("programsData", {});
+  const SELECTED_CLUB_ID = readJsonScript("selectedClubId", "");
 
-  // ---------- Helpers ----------
   function escapeHtml(str) {
     return String(str ?? "")
       .replaceAll("&", "&amp;")
@@ -149,6 +146,7 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
   }
+
   function escapeAttr(str) {
     return String(str ?? "")
       .replaceAll("&", "&amp;")
@@ -157,6 +155,7 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
   }
+
   function isValidCoord(n) {
     return Number.isFinite(n) && Math.abs(n) > 0.000001;
   }
@@ -181,11 +180,13 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
 
   function programsHTML(programCodes, { compact = false } = {}) {
     if (!Array.isArray(programCodes) || !programCodes.length) return "";
+
     const wrapClass = compact ? "tt-list tt-list--compact" : "tt-list";
 
     const items = programCodes.map(code => {
       const p = PROGRAMS[code];
       if (!p) return "";
+
       const icon = escapeAttr(p.icon || "");
       const label = escapeHtml(p.label || code);
 
@@ -231,7 +232,9 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     ].filter(Boolean).join("");
 
     const hasCoords = isValidCoord(Number(c.lat)) && isValidCoord(Number(c.lng));
-    const gmaps = hasCoords ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(c.lat + "," + c.lng)}` : "";
+    const gmaps = hasCoords
+      ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(c.lat + "," + c.lng)}`
+      : "";
 
     return `
       <div class="club-details">
@@ -250,7 +253,7 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     `;
   }
 
-  // ---------- Modal logic ----------
+  // Modal logic
   const modal = document.getElementById("clubModal");
   const modalPanel = modal.querySelector(".cm-modal__panel");
   const modalContent = document.getElementById("clubModalContent");
@@ -276,11 +279,15 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
   }
 
   modal.addEventListener("click", (e) => {
-    if (e.target && e.target.hasAttribute("data-close")) closeModal();
+    if (e.target && e.target.hasAttribute("data-close")) {
+      closeModal();
+    }
   });
 
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && modal.classList.contains("is-open")) closeModal();
+    if (e.key === "Escape" && modal.classList.contains("is-open")) {
+      closeModal();
+    }
   });
 
   document.addEventListener("keydown", (e) => {
@@ -294,22 +301,25 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     const last  = focusables[focusables.length - 1];
 
     if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault(); last.focus();
+      e.preventDefault();
+      last.focus();
     } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault(); first.focus();
+      e.preventDefault();
+      first.focus();
     }
   });
 
-  // ---------- Map init ----------
-  const map = L.map("clubsMap", { zoomControl: true, scrollWheelZoom: true })
-    .setView([56.8796, 24.6032], 7);
+  // Map init
+  const map = L.map("clubsMap", {
+    zoomControl: true,
+    scrollWheelZoom: true
+  }).setView([56.8796, 24.6032], 7);
 
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 18,
     attribution: "&copy; OpenStreetMap"
   }).addTo(map);
 
-  // MarkerCluster group
   const cluster = L.markerClusterGroup({
     showCoverageOnHover: false,
     spiderfyOnMaxZoom: true,
@@ -317,6 +327,8 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
   });
 
   const markerItems = [];
+  const markerByClubId = new Map();
+  let focusCircle = null;
 
   CLUBS.forEach(c => {
     const lat = Number(c.lat);
@@ -341,11 +353,47 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
 
     cluster.addLayer(m);
     markerItems.push({ club: c, marker: m });
+
+    if (c.id != null && c.id !== "") {
+      markerByClubId.set(String(c.id), { club: c, marker: m });
+    }
   });
 
   map.addLayer(cluster);
 
-  // ---------- Location + Geocoding (manual fallback) ----------
+  function focusSelectedClub(clubId) {
+    if (!clubId || !markerByClubId.has(String(clubId))) return;
+
+    const item = markerByClubId.get(String(clubId));
+    const lat = Number(item.club.lat);
+    const lng = Number(item.club.lng);
+
+    if (!isValidCoord(lat) || !isValidCoord(lng)) return;
+
+    map.setView([lat, lng], 14);
+
+    if (focusCircle) {
+      map.removeLayer(focusCircle);
+    }
+
+    focusCircle = L.circle([lat, lng], {
+      radius: 2000,
+      weight: 2,
+      opacity: 0.7,
+      fillOpacity: 0.08
+    }).addTo(map);
+
+    setTimeout(() => {
+      openModal(buildDetailsHTML(item.club));
+      item.marker.openTooltip();
+    }, 300);
+
+    setTimeout(() => {
+      item.marker.closeTooltip();
+    }, 2500);
+  }
+
+  // Location / geocoding
   const addrLine = document.getElementById("addrLine");
   const locBtn = document.getElementById("locBtn");
   const addrBtn = document.getElementById("addrBtn");
@@ -359,16 +407,21 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
 
   let userLatLng = null;
   let radiusKm = 50;
-
   let userMarker = null;
 
   function setActivePoint(lat, lng, labelText) {
     userLatLng = { lat, lng };
 
-    if (userMarker) { map.removeLayer(userMarker); userMarker = null; }
+    if (userMarker) {
+      map.removeLayer(userMarker);
+      userMarker = null;
+    }
 
     userMarker = L.circleMarker([lat, lng], {
-      radius: 7, weight: 2, opacity: 1, fillOpacity: 0.35
+      radius: 7,
+      weight: 2,
+      opacity: 1,
+      fillOpacity: 0.35
     }).addTo(map).bindTooltip("Izvēlētā lokācija", { direction: "top" });
 
     addrLine.textContent = labelText || "—";
@@ -390,6 +443,7 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     if (!res.ok) throw new Error("Geocode failed");
     const list = await res.json();
     if (!Array.isArray(list) || !list.length) return null;
+
     return {
       lat: Number(list[0].lat),
       lng: Number(list[0].lon),
@@ -397,7 +451,6 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     };
   }
 
-  // ---------- Proximity ----------
   function distanceKm(aLat, aLng, bLat, bLng) {
     const R = 6371;
     const dLat = (bLat - aLat) * Math.PI / 180;
@@ -405,8 +458,8 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     const sLat1 = aLat * Math.PI / 180;
     const sLat2 = bLat * Math.PI / 180;
 
-    const h = Math.sin(dLat/2) ** 2 +
-      Math.cos(sLat1) * Math.cos(sLat2) * (Math.sin(dLng/2) ** 2);
+    const h = Math.sin(dLat / 2) ** 2 +
+      Math.cos(sLat1) * Math.cos(sLat2) * (Math.sin(dLng / 2) ** 2);
 
     return 2 * R * Math.asin(Math.sqrt(h));
   }
@@ -422,13 +475,17 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     if (!userLatLng) return;
 
     const results = markerItems.map(item => {
-      const d = distanceKm(userLatLng.lat, userLatLng.lng, Number(item.club.lat), Number(item.club.lng));
+      const d = distanceKm(
+        userLatLng.lat,
+        userLatLng.lng,
+        Number(item.club.lat),
+        Number(item.club.lng)
+      );
       return { ...item, d };
     }).sort((a, b) => a.d - b.d);
 
     results.forEach(r => setMarkerNear(r.marker, r.d <= radiusKm));
 
-    // ✅ ONLY 4 closest (not 5)
     const top = results.slice(0, 4);
 
     closestList.innerHTML = top.map(r => {
@@ -451,6 +508,7 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     radiusLabel.textContent = String(radiusKm);
     if (userLatLng) applyProximity();
   }
+
   radiusEl.addEventListener("input", updateRadius);
 
   async function requestLocation() {
@@ -458,6 +516,7 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
       locStatus.textContent = "Lokācija strādā tikai ar HTTPS.";
       return;
     }
+
     if (!navigator.geolocation) {
       locStatus.textContent = "Šī ierīce neatbalsta lokāciju.";
       return;
@@ -500,6 +559,7 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     }
 
     locStatus.textContent = "Meklēju adresi…";
+
     try {
       const hit = await geocodeAddress(q);
       if (!hit || !isValidCoord(hit.lat) || !isValidCoord(hit.lng)) {
@@ -509,7 +569,6 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
 
       locStatus.textContent = "Adrese atrasta. Rēķinu tuvākos klubus…";
       setActivePoint(hit.lat, hit.lng, hit.label || q);
-
       map.setView([hit.lat, hit.lng], 12);
     } catch (e) {
       console.error(e);
@@ -525,9 +584,18 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
 
     markerItems.forEach(it => setMarkerNear(it.marker, false));
 
-    if (userMarker) { map.removeLayer(userMarker); userMarker = null; }
+    if (userMarker) {
+      map.removeLayer(userMarker);
+      userMarker = null;
+    }
+
+    if (focusCircle) {
+      map.removeLayer(focusCircle);
+      focusCircle = null;
+    }
 
     map.setView([56.8796, 24.6032], 7);
+    closeModal();
   }
 
   locBtn.addEventListener("click", requestLocation);
@@ -535,10 +603,16 @@ $programsJson = json_encode($programs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
   clearLocBtn.addEventListener("click", clearLocation);
 
   manualAddress.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") useManualAddress();
+    if (e.key === "Enter") {
+      useManualAddress();
+    }
   });
+
+  if (SELECTED_CLUB_ID) {
+    focusSelectedClub(SELECTED_CLUB_ID);
+  }
 
 })();
 </script>
 
-<?php require __DIR__ . "/assets/footer.php"; ?>
+<?php require __DIR__ . "/../includes/templates/footer.php"; ?>

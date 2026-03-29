@@ -92,7 +92,8 @@ p{
 /* =========================
    HEADER
    ========================= */
-.prof-header{
+.prof-header,
+.main-header{
     background:rgba(30,79,161,.92);
     backdrop-filter:blur(10px);
     padding:.85rem 1rem;
@@ -102,13 +103,28 @@ p{
     box-shadow:var(--shadow-sm);
 }
 
-.header-container{
+.header-container,
+.nav-container{
     display:flex;
     align-items:center;
     justify-content:space-between;
     max-width:var(--container);
     margin:auto;
     gap:1rem;
+}
+
+/* Alt logo style for newer header */
+.logo{
+    display:inline-flex;
+    align-items:center;
+    gap:.7rem;
+    color:var(--white);
+    font-weight:1000;
+    font-size:1.1rem;
+}
+.logo img{
+    height:44px;
+    width:auto;
 }
 
 /* Brand block */
@@ -175,14 +191,16 @@ p{
     gap:.8rem;
 }
 
-.nav-link{
+.nav-link,
+.main-nav a{
     color:var(--white);
     font-size:1.05rem;
     font-weight:900;
     padding:.45rem .75rem;
     border-radius:999px;
 }
-.nav-link:hover{
+.nav-link:hover,
+.main-nav a:hover{
     background:rgba(244,196,48,.25);
     color:var(--white);
 }
@@ -197,6 +215,107 @@ p{
 .nav-cta-text{
     margin-left:.4rem;
     font-weight:1000;
+}
+
+.nav-right{
+    display:flex;
+    align-items:center;
+    gap:.75rem;
+}
+
+/* USER MENU */
+.user-menu{
+    position:relative;
+    display:flex;
+    align-items:center;
+}
+
+.user-avatar-btn{
+    border:none;
+    background:transparent;
+    padding:0;
+    cursor:pointer;
+}
+
+.user-avatar{
+    width:44px;
+    height:44px;
+    border-radius:999px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:linear-gradient(135deg, rgba(244,196,48,.95), rgba(30,79,161,.95));
+    color:#fff;
+    font-weight:1000;
+    font-size:1rem;
+    letter-spacing:.4px;
+    box-shadow:var(--shadow-sm);
+    border:2px solid rgba(255,255,255,.35);
+}
+
+.user-avatar-btn:hover .user-avatar{
+    transform:translateY(-1px);
+    box-shadow:var(--shadow);
+}
+
+.user-dropdown{
+    position:absolute;
+    top:calc(100% + 10px);
+    right:0;
+    min-width:220px;
+    background:var(--surface);
+    border:var(--border);
+    border-radius:16px;
+    box-shadow:var(--shadow);
+    padding:.5rem;
+    opacity:0;
+    pointer-events:none;
+    transform:translateY(-8px);
+    transition:opacity .2s linear, transform .2s linear;
+    z-index:1200;
+}
+
+.user-menu.open .user-dropdown{
+    opacity:1;
+    pointer-events:auto;
+    transform:translateY(0);
+}
+
+.user-dropdown-head{
+    padding:.65rem .75rem;
+    border-bottom:1px solid rgba(0,0,0,.08);
+    margin-bottom:.35rem;
+}
+
+.user-dropdown-name{
+    font-weight:1000;
+    color:var(--text);
+    line-height:1.2;
+}
+
+.user-dropdown-role{
+    font-size:.9rem;
+    color:var(--muted);
+    margin-top:.2rem;
+}
+
+.user-dropdown-link{
+    display:flex;
+    align-items:center;
+    gap:.65rem;
+    padding:.8rem .85rem;
+    border-radius:12px;
+    color:var(--text);
+    font-weight:900;
+}
+
+.user-dropdown-link:hover{
+    background:rgba(30,79,161,.08);
+}
+
+.user-dropdown-link--danger:hover{
+    background:rgba(198,40,40,.08);
+    color:var(--red);
 }
 
 /* Burger button */
@@ -421,7 +540,6 @@ p{
 
 /* =========================
    ABOUT PROGRAM CARDS
-   Fix: badge next to logo (not under)
    ========================= */
 .program-cards .program-card{
     text-align:left;
@@ -430,12 +548,6 @@ p{
     background:var(--surface);
 }
 
-/* You MUST use this structure in HTML:
-   <div class="program-head">
-      <div class="program-logo"><img ...></div>
-      <span class="badge ...">...</span>
-   </div>
-*/
 .program-head{
     display:flex;
     align-items:flex-start;
@@ -770,7 +882,6 @@ p{
     max-width:980px;
     width:calc(100% - 2rem);
     margin:4.5rem auto 1.25rem;
-
     background:rgba(255,255,255,.10);
     border:1px solid rgba(255,255,255,.16);
     border-radius:var(--radius);
@@ -883,7 +994,7 @@ p{
 /* Closest list */
 .closest-list{
     margin-top: 1rem;
-    margin-bottom: 2rem; /* ✅ space between cards and map */
+    margin-bottom: 2rem;
     display:grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 1rem;
@@ -895,7 +1006,7 @@ p{
     border-radius: var(--radius-sm);
     box-shadow: var(--shadow-sm);
     padding: 1rem;
-    cursor: pointer; /* ✅ clickable vibe */
+    cursor: pointer;
 }
 
 .closest-card:hover{
@@ -925,29 +1036,17 @@ p{
     border: none !important;
 }
 
-/* ✅ Default = RED markers for visibility */
 .tri-marker .tri{
     display:block;
     width:0;
     height:0;
     border-left:11px solid transparent;
     border-right:11px solid transparent;
-    border-top:18px solid rgba(211, 47, 47, .92); /* RED */
+    border-top:18px solid rgba(211, 47, 47, .92);
     filter: drop-shadow(0 8px 12px rgba(0,0,0,.22));
     transform: translateY(2px);
 }
 
-/* ✅ Keep per-program colors OFF (you wanted red for visibility)
-   If you ever want them back, uncomment these:
-*/
-/*
-.tri-marker.cm .tri{ border-top-color: rgba(30,79,161,.92); }
-.tri-marker.pm .tri{ border-top-color: rgba(244,196,48,.92); }
-.tri-marker.mg .tri{ border-top-color: rgba(40,140,80,.92); }
-.tri-marker.v  .tri{ border-top-color: rgba(198,40,40,.92); }
-*/
-
-/* Proximity highlight */
 .tri-marker.is-far{ filter: grayscale(0.85) opacity(0.55); }
 .tri-marker.is-near{ filter: none; }
 .tri-marker.is-near .tri{
@@ -955,24 +1054,21 @@ p{
     border-top-width: 20px;
 }
 
-/* ✅ Closest marker = BLUE */
 .tri-marker.is-closest .tri{
-    border-top-color: rgba(25,118,210,.95); /* BLUE */
+    border-top-color: rgba(25,118,210,.95);
     border-top-width: 22px;
     filter: drop-shadow(0 12px 18px rgba(0,0,0,.35));
 }
 
-/* ✅ Hover-highlight pulse */
 @keyframes markerPulse {
-  0%   { transform: translateY(2px) scale(1);    filter: drop-shadow(0 8px 12px rgba(0,0,0,.22)); }
+  0%   { transform: translateY(2px) scale(1); filter: drop-shadow(0 8px 12px rgba(0,0,0,.22)); }
   50%  { transform: translateY(-2px) scale(1.15); filter: drop-shadow(0 14px 22px rgba(0,0,0,.35)); }
-  100% { transform: translateY(2px) scale(1);    filter: drop-shadow(0 8px 12px rgba(0,0,0,.22)); }
+  100% { transform: translateY(2px) scale(1); filter: drop-shadow(0 8px 12px rgba(0,0,0,.22)); }
 }
 .tri-marker.is-highlight .tri{
     animation: markerPulse .75s ease-in-out infinite;
 }
 
-/* Tooltip wrapper we set in JS: className: "club-tooltip-wrap ..." */
 .leaflet-tooltip.club-tooltip-wrap{
     background: rgba(255,255,255,.96) !important;
     border: 1px solid rgba(0,0,0,.10) !important;
@@ -982,13 +1078,11 @@ p{
     color: var(--text) !important;
 }
 
-/* Remove tooltip arrow border glitch */
 .leaflet-tooltip-left:before,
 .leaflet-tooltip-right:before{
     border: none !important;
 }
 
-/* Tooltip content */
 .tt-title{
     font-weight:1000;
     font-size:1.05rem;
@@ -1000,7 +1094,6 @@ p{
     line-height:1.25rem;
 }
 
-/* Program list used by JS */
 .tt-list{
     display:flex;
     flex-direction:column;
@@ -1031,13 +1124,11 @@ p{
     font-weight:900;
 }
 
-/* Compact hover mode */
 .tt-list--compact{ gap:.25rem; }
 .tt-row--compact{ gap:.45rem; }
 .tt-ico--compact{ width:20px; height:20px; padding:2px; }
 .tt-label--compact{ font-size:.9rem; line-height:1.1; font-weight:900; }
 
-/* Clubs modal (map details) */
 .cm-modal{ display:none; position:fixed; inset:0; z-index:9999; }
 .cm-modal.is-open{ display:block; }
 
@@ -1200,7 +1291,6 @@ p{
     border-color:var(--blue-800);
     box-shadow:0 0 0 2px rgba(30,79,161,.15);
 }
-/* ===== Compact register/login ===== */
 
 .auth-page--compact{
     min-height:100vh;
@@ -1243,15 +1333,31 @@ p{
     text-decoration:underline;
 }
 
+.error{
+    margin-bottom:1rem;
+    padding:.85rem 1rem;
+    border-radius:12px;
+    background:rgba(198,40,40,.10);
+    border:1px solid rgba(198,40,40,.20);
+    color:#8b1e1e;
+    font-weight:700;
+}
+
+.success{
+    margin-bottom:1rem;
+    padding:.85rem 1rem;
+    border-radius:12px;
+    background:rgba(40,140,80,.10);
+    border:1px solid rgba(40,140,80,.20);
+    color:#166534;
+    font-weight:700;
+}
 
 @media (max-width:480px){
     .form-grid{
         grid-template-columns:1fr;
     }
 }
-
-
-
 
 /* =========================
    RESPONSIVE
@@ -1289,7 +1395,6 @@ p{
     .logo{ height:36px; }
     .brand-sub{ display:none; }
 
-    /* mobile nav panel */
     .main-nav{
         display:block;
         position:fixed;
@@ -1313,7 +1418,8 @@ p{
         pointer-events:auto;
         transform:translateX(-50%) translateY(0);
     }
-    .main-nav .nav-link{
+    .main-nav .nav-link,
+    .main-nav a{
         display:flex;
         align-items:center;
         justify-content:space-between;
@@ -1323,7 +1429,8 @@ p{
         font-size:1.05rem;
         font-weight:1000;
     }
-    .main-nav .nav-link:hover{
+    .main-nav .nav-link:hover,
+    .main-nav a:hover{
         background:rgba(30,79,161,.08);
         color:var(--text);
     }
@@ -1347,7 +1454,6 @@ p{
         padding:.9rem .9rem .6rem;
     }
 
-    /* About program card header scales */
     .program-logo{
         width:64px;
         height:64px;
@@ -1355,8 +1461,12 @@ p{
     }
     .program-logo img{ max-height:52px; }
 
-    /* Map */
     .leaflet-map{ height:460px; }
+
+    .user-dropdown{
+        right:0;
+        min-width:200px;
+    }
 }
 
 @media (max-width:420px){
@@ -1372,6 +1482,12 @@ p{
     .lightbox-img{ max-height:58vh; }
 
     .program-head{ gap:.55rem; }
+
+    .user-avatar{
+        width:40px;
+        height:40px;
+        font-size:.95rem;
+    }
 }
 
 /* =========================
@@ -1422,8 +1538,311 @@ p{
     color: var(--muted);
     font-style: italic;
 }
+/* =========================
+   HOMEPAGE / HEADER POLISH
+   ========================= */
 
+/* Uz sākumlapas nerādām milzīgu dubulto title sajūtu */
+.main-header{
+    padding: .7rem 1rem;
+}
 
+.nav-container{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:1.25rem;
+}
 
+.logo{
+    display:inline-flex;
+    align-items:center;
+    gap:.7rem;
+    color:var(--white);
+    font-weight:1000;
+    font-size:1.05rem;
+    min-width:max-content;
+    flex:0 0 auto;
+}
 
+.logo img{
+    height:44px;
+    width:auto;
+}
 
+.logo span{
+    font-size:1.05rem;
+    font-weight:1000;
+    line-height:1;
+}
+
+.header-title{
+    flex:1;
+    text-align:center;
+    font-size:clamp(1.15rem, 1.9vw, 1.9rem);
+    font-weight:1000;
+    color:var(--white);
+    padding:0 .75rem;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+.main-nav{
+    display:flex;
+    align-items:center;
+    gap:.65rem;
+    flex:0 1 auto;
+}
+
+.main-nav a{
+    color:var(--white);
+    font-size:1rem;
+    font-weight:900;
+    padding:.45rem .7rem;
+    border-radius:999px;
+}
+
+.main-nav a:hover{
+    background:rgba(244,196,48,.25);
+    color:var(--white);
+}
+
+.nav-right{
+    display:flex;
+    align-items:center;
+    gap:.75rem;
+    flex:0 0 auto;
+}
+
+/* =========================
+   PROGRAM BADGES
+   ========================= */
+.program-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:.4rem .72rem;
+    border-radius:999px;
+    font-size:.88rem;
+    font-weight:1000;
+    background:rgba(244,196,48,.16);
+    border:1px solid rgba(244,196,48,.30);
+    color:#6a5200;
+    line-height:1;
+    white-space:nowrap;
+}
+
+/* =========================
+   BADGE TUNING
+   ========================= */
+.badge-gold{
+    background:rgba(244,196,48,.16);
+    border:1px solid rgba(244,196,48,.30);
+    color:#6a5200;
+}
+
+/* =========================
+   HOMEPAGE CLUB CARDS
+   ========================= */
+.club-cards{
+    align-items:stretch;
+}
+
+.club-card{
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    gap:1rem;
+    min-height:220px;
+    padding:1.35rem 1.35rem 1.2rem;
+}
+
+.club-card-head{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:.8rem;
+}
+
+.club-card-title{
+    margin:0;
+    font-size:clamp(1.25rem, 1.6vw, 1.7rem);
+    line-height:1.2;
+    font-weight:1000;
+    max-width:100%;
+    word-break:break-word;
+}
+
+.club-badge{
+    white-space:normal;
+    line-height:1.25;
+    padding:.45rem .85rem;
+    max-width:100%;
+}
+
+.club-address{
+    display:flex;
+    align-items:flex-start;
+    gap:.55rem;
+    font-size:1.05rem;
+    line-height:1.5;
+    margin:0;
+}
+
+.club-address i{
+    margin-top:.18rem;
+    color:var(--blue-800);
+    flex:0 0 auto;
+}
+
+.club-card-actions{
+    margin-top:auto;
+    display:flex;
+    justify-content:flex-end;
+}
+
+.club-link{
+    margin-top:0;
+    font-size:1.05rem;
+    font-weight:1000;
+}
+
+/* =========================
+   USER MENU POLISH
+   ========================= */
+.user-menu{
+    position:relative;
+    display:flex;
+    align-items:center;
+}
+
+.user-avatar-btn{
+    border:none;
+    background:transparent;
+    padding:0;
+    cursor:pointer;
+}
+
+.user-avatar{
+    width:44px;
+    height:44px;
+    border-radius:999px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:linear-gradient(135deg, rgba(244,196,48,.95), rgba(30,79,161,.95));
+    color:#fff;
+    font-weight:1000;
+    font-size:1rem;
+    letter-spacing:.4px;
+    box-shadow:var(--shadow-sm);
+    border:2px solid rgba(255,255,255,.35);
+}
+
+.user-avatar-btn:hover .user-avatar{
+    transform:translateY(-1px);
+    box-shadow:var(--shadow);
+}
+
+.user-dropdown{
+    position:absolute;
+    top:calc(100% + 10px);
+    right:0;
+    min-width:220px;
+    background:var(--surface);
+    border:var(--border);
+    border-radius:16px;
+    box-shadow:var(--shadow);
+    padding:.5rem;
+    opacity:0;
+    pointer-events:none;
+    transform:translateY(-8px);
+    transition:opacity .2s linear, transform .2s linear;
+    z-index:1200;
+}
+
+.user-menu.open .user-dropdown{
+    opacity:1;
+    pointer-events:auto;
+    transform:translateY(0);
+}
+
+.user-dropdown-head{
+    padding:.65rem .75rem;
+    border-bottom:1px solid rgba(0,0,0,.08);
+    margin-bottom:.35rem;
+}
+
+.user-dropdown-name{
+    font-weight:1000;
+    color:var(--text);
+    line-height:1.2;
+}
+
+.user-dropdown-role{
+    font-size:.9rem;
+    color:var(--muted);
+    margin-top:.2rem;
+}
+
+.user-dropdown-link{
+    display:flex;
+    align-items:center;
+    gap:.65rem;
+    padding:.8rem .85rem;
+    border-radius:12px;
+    color:var(--text);
+    font-weight:900;
+}
+
+.user-dropdown-link:hover{
+    background:rgba(30,79,161,.08);
+}
+
+.user-dropdown-link--danger:hover{
+    background:rgba(198,40,40,.08);
+    color:var(--red);
+}
+
+/* =========================
+   RESPONSIVE TUNING
+   ========================= */
+@media (max-width:1100px){
+    .club-card{
+        min-height:unset;
+    }
+}
+
+@media (max-width:900px){
+    .header-title{
+        display:none;
+    }
+}
+
+@media (max-width:768px){
+    .club-card-title{
+        font-size:1.35rem;
+    }
+
+    .club-card-actions{
+        justify-content:flex-start;
+    }
+
+    .logo span{
+        display:none;
+    }
+
+    .user-dropdown{
+        right:0;
+        min-width:200px;
+    }
+}
+
+@media (max-width:420px){
+    .user-avatar{
+        width:40px;
+        height:40px;
+        font-size:.95rem;
+    }
+}

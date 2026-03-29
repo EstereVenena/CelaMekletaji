@@ -1,5 +1,5 @@
 <?php
-require_once "assets/database.php";
+require_once __DIR__ . "/../includes/config/database.php";
 
 $kluda = "";
 $veiksmigi = "";
@@ -83,14 +83,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reģistrācija | Ceļa meklētāji</title>
-    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>
 <main class="auth-page">
     <div class="auth-card">
 
         <div class="auth-head">
-            <img src="images/logo.png" alt="Ceļa meklētāji logo">
+            <img src="../assets/images/logos/logo.png" alt="Ceļa meklētāji logo">
             <h1>Reģistrācija</h1>
             <p class="muted small">
                 Izveido kontu un gaidi apstiprinājumu
@@ -139,7 +139,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             <div class="auth-links">
                 <a href="login.php">Jau ir konts? Pieslēgties</a>
-                <a href="index.php">← Atpakaļ uz sākumu</a>
+                <a href="../index.php">← Atpakaļ uz sākumu</a>
             </div>
 
         </form>

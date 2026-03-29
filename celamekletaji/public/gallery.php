@@ -1,8 +1,8 @@
 <?php
     $lapa = "Ceļa meklētāju galerija";
     $title = "Galerija | Ceļa meklētāji";
-    require "assets/header.php";
-    require_once "assets/database.php";
+    require __DIR__ . "/../includes/templates/header.php";
+require_once __DIR__ . "/../includes/config/database.php";
 
     $sort = $_GET['sort'] ?? 'upload_date';
     $order = 'DESC';
@@ -179,5 +179,5 @@
 </script>
 
 <?php
-    require "assets/footer.php";
+   require __DIR__ . "/../includes/templates/footer.php";
 ?>

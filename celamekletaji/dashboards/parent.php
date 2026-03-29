@@ -1,20 +1,20 @@
 <?php
 session_start();
+
 $lapa  = "Vecāku panelis";
 $title = "Vecāku panelis - Ceļa meklētāji";
 
-require "../assets/header.php";
-require_once "../assets/database.php";
+require __DIR__ . "/../includes/templates/header.php";
+require_once __DIR__ . "/../includes/config/database.php";
 
 // Check if user is logged in and is a parent
-if (!isset($_SESSION["lietotajs_id"]) || $_SESSION["loma"] !== "Vecāks") {
-    header("Location: ../login.php");
+if (!isset($_SESSION["lietotajs_id"]) || ($_SESSION["loma"] ?? "") !== "Vecāks") {
+    header("Location: ../auth/login.php");
     exit();
 }
 
 // Get parent's children information (placeholder)
 $children = [];
-// TODO: Query to get children associated with this parent
 ?>
 
 <main class="dashboard-main">
@@ -31,8 +31,7 @@ $children = [];
                 <p class="muted small">Loma: <strong>Vecāks</strong></p>
             </div>
             <div style="display:flex; gap:.6rem; align-items:center;">
-                <a class="btn btn-outline btn-sm" href="../assets/logout.php">Izrakstīties</a>
-                <a class="btn btn-primary btn-sm" href="../register.php">Pievienot bērnu</a>
+                <a class="btn btn-primary btn-sm" href="../auth/register.php">Pievienot bērnu</a>
             </div>
         </div>
 
@@ -43,7 +42,10 @@ $children = [];
 
                 <?php if (empty($children)): ?>
                     <div class="divider"></div>
-                    <p class="muted">Pagaidām nav pievienotu bērnu. <a class="link" href="../register.php">Pievienot bērnu</a></p>
+                    <p class="muted">
+                        Pagaidām nav pievienotu bērnu.
+                        <a class="link" href="../auth/register.php">Pievienot bērnu</a>
+                    </p>
                 <?php else: ?>
                     <div class="divider"></div>
                     <div class="cards">
@@ -51,10 +53,16 @@ $children = [];
                             <div class="card">
                                 <div class="program-head">
                                     <div style="display:flex; gap:.75rem; align-items:center;">
-                                        <div class="program-logo"><img src="../assets/images/avatar-placeholder.png" alt="avatar"></div>
+                                        <div class="program-logo">
+                                            <img src="../assets/images/avatar-placeholder.png" alt="avatar">
+                                        </div>
                                         <div>
                                             <h4 style="margin:0"><?php echo htmlspecialchars($child['vards'] ?? 'Bērns'); ?></h4>
-                                            <p class="muted small"><?php echo htmlspecialchars($child['vecums'] ?? '—'); ?> • <?php echo htmlspecialchars($child['klubi'] ?? 'Nav klubu'); ?></p>
+                                            <p class="muted small">
+                                                <?php echo htmlspecialchars($child['vecums'] ?? '—'); ?>
+                                                •
+                                                <?php echo htmlspecialchars($child['klubi'] ?? 'Nav klubu'); ?>
+                                            </p>
                                         </div>
                                     </div>
                                     <div style="display:flex; gap:.5rem; align-items:center;">
@@ -88,4 +96,4 @@ $children = [];
     </div>
 </main>
 
-<?php require "../assets/footer.php"; ?>
+<?php require __DIR__ . "/../includes/templates/footer.php"; ?>

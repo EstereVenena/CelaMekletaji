@@ -1,24 +1,23 @@
 <?php
 session_start();
+
 $lapa  = "Lietotāja panelis";
 $title = "Lietotāja panelis - Ceļa meklētāji";
 
-require "../assets/header.php";
-require_once "../assets/database.php";
+require __DIR__ . "/../includes/templates/header.php";
+require_once __DIR__ . "/../includes/config/database.php";
 
 // Check if user is logged in
 if (!isset($_SESSION["lietotajs_id"])) {
-    header("Location: ../login.php");
+    header("Location: ../auth/login.php");
     exit();
 }
-
-// Get user information (placeholder)
 ?>
 
 <main class="dashboard-main">
     <div class="container">
         <div class="dashboard-header">
-            <h2>Sveiki, <?php echo htmlspecialchars($_SESSION["lietotajvards"]); ?>!</h2>
+            <h2>Sveiki, <?php echo htmlspecialchars($_SESSION["lietotajvards"] ?? "Lietotājs"); ?>!</h2>
             <p>Šis ir jūsu lietotāja panelis. Šobrīd tiek izstrādāts.</p>
         </div>
 
@@ -41,4 +40,4 @@ if (!isset($_SESSION["lietotajs_id"])) {
     </div>
 </main>
 
-<?php require "../assets/footer.php"; ?>
+<?php require __DIR__ . "/../includes/templates/footer.php"; ?>
