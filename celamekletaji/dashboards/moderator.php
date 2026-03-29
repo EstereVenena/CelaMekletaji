@@ -1,25 +1,24 @@
 <?php
 session_start();
+
 $lapa  = "Moderatora panelis";
 $title = "Moderatora panelis - Ceļa meklētāji";
 
-require "../assets/header.php";
-require_once "../assets/database.php";
+require __DIR__ . "/../includes/templates/header.php";
+require_once __DIR__ . "/../includes/config/database.php";
 
 // Check if user is logged in and is a moderator
-if (!isset($_SESSION["lietotajs_id"]) || $_SESSION["loma"] !== "moderators") {
-    header("Location: ../login.php");
+if (!isset($_SESSION["lietotajs_id"]) || ($_SESSION["loma"] ?? "") !== "moderators") {
+    header("Location: ../auth/login.php");
     exit();
 }
-
-// Get moderator information (placeholder)
 ?>
 
 <main class="dashboard-main">
     <div class="container">
         <div class="dashboard-header">
-            <h2>Sveiki, moderators <?php echo htmlspecialchars($_SESSION["lietotajvards"]); ?>!</h2>
-            <p>Šis ir moderators panelis. Šobrīd tiek izstrādāts.</p>
+            <h2>Sveiki, moderators <?php echo htmlspecialchars($_SESSION["lietotajvards"] ?? ""); ?>!</h2>
+            <p>Šis ir moderatora panelis. Šobrīd tiek izstrādāts.</p>
         </div>
 
         <div class="dashboard-content">
@@ -41,4 +40,4 @@ if (!isset($_SESSION["lietotajs_id"]) || $_SESSION["loma"] !== "moderators") {
     </div>
 </main>
 
-<?php require "../assets/footer.php"; ?>
+<?php require __DIR__ . "/../includes/templates/footer.php"; ?>

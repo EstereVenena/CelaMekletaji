@@ -1,102 +1,222 @@
+<?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+$base = '/4pt/venena/celamekletaji';
+
+$isLoggedIn = isset($_SESSION["lietotajs_id"]);
+$username = trim($_SESSION["lietotajvards"] ?? '');
+$userRole = trim($_SESSION["loma"] ?? '');
+
+// Iniciāļi avataram
+$initials = 'U';
+if ($username !== '') {
+    $parts = preg_split('/\s+/', $username);
+    if (!empty($parts[0])) {
+        $initials = mb_strtoupper(mb_substr($parts[0], 0, 1));
+        if (isset($parts[1]) && $parts[1] !== '') {
+            $initials .= mb_strtoupper(mb_substr($parts[1], 0, 1));
+        }
+    }
+}
+
+// Profila saite pēc lomas
+$profileUrl = $base . '/dashboards/user.php';
+
+if ($userRole === 'admin') {
+    $profileUrl = $base . '/dashboards/admin.php';
+} elseif ($userRole === 'moderators') {
+    $profileUrl = $base . '/dashboards/moderator.php';
+} elseif ($userRole === 'Vecāks' || $userRole === 'parent') {
+    $profileUrl = $base . '/dashboards/parent.php';
+}
+?>
 <!DOCTYPE html>
 <html lang="lv">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $title; ?></title>
+    <title><?php echo htmlspecialchars($title ?? 'Ceļa meklētāji'); ?></title>
 
-    <link rel="stylesheet" href="/celamekletaji/assets/css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="<?php echo $base; ?>/assets/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
 
-<header class="prof-header">
-    <div class="header-container">
+<header class="main-header">
+    <div class="container nav-container">
 
-        <!-- Brand block: whole thing clickable to home -->
-        <a href="/celamekletaji/index.php" class="brand-block" aria-label="Uz sākumu">
-            <div class="brand-logo">
-                <!-- Update image path -->
-                <img src="/celamekletaji/assets/images/logo.png" class="logo" alt="Ceļa meklētāji"> <!-- Changed from /images/logo.png -->
-            </div>
-            <div class="brand-meta">
-                <div class="brand-name">Ceļa meklētāji</div>
-                <div class="brand-sub">Pathfinder klubs</div>
-            </div>
+        <!-- LOGO -->
+        <a href="<?php echo $base; ?>/index.php" class="logo" aria-label="Uz sākumu">
+            <img src="<?php echo $base; ?>/assets/images/logos/logo.png" alt="Ceļa meklētāji logo">
+            <span>Ceļa meklētāji</span>
         </a>
 
-        <!-- Page title (from PHP variable) -->
-        <h1 class="header-title"><?php echo $lapa; ?></h1>
+        <!-- PAGE TITLE -->
+        <?php if (!empty($lapa) && $lapa !== "Ceļa meklētāji"): ?>
+            <div class="header-title"><?php echo htmlspecialchars($lapa); ?></div>
+        <?php endif; ?>
 
+        <!-- NAV -->
         <nav class="main-nav" id="mainNav" aria-label="Galvenā navigācija">
-            <!-- Update these navigation links to point to the public folder -->
-            <a href="/celamekletaji/public/about.php" class="nav-link">Par mums</a>      <!-- Changed from /about.php -->
-            <a href="/celamekletaji/public/gallery.php" class="nav-link">Galerija</a>    <!-- Changed from /gallery.php -->
-            <a href="/celamekletaji/public/clubs.php" class="nav-link">Klubi</a>          <!-- Changed from /clubs.php -->
-
-            <a href="/celamekletaji/auth/login.php" class="nav-link nav-cta" aria-label="Profils / Pievienoties"> <!-- Changed from /login.php -->
-                <i class="fas fa-user"></i>
-                <span class="nav-cta-text">Pievienoties</span>
-            </a>
+            <a href="<?php echo $base; ?>/index.php">Sākums</a>
+            <a href="<?php echo $base; ?>/public/about.php">Par mums</a>
+            <a href="<?php echo $base; ?>/public/gallery.php">Galerija</a>
+            <a href="<?php echo $base; ?>/public/clubs.php">Klubi</a>
         </nav>
 
-        <button id="menu-btn"
+        <!-- RIGHT SIDE -->
+        <div class="nav-right">
+
+            <?php if (!$isLoggedIn): ?>
+                <a href="<?php echo $base; ?>/auth/login.php" class="nav-link nav-cta" aria-label="Pieslēgties">
+                    <i class="fas fa-user"></i>
+                    <span class="nav-cta-text">Pievienoties</span>
+                </a>
+            <?php else: ?>
+                <div class="user-menu" id="userMenu">
+                    <button
+                        class="user-avatar-btn"
+                        id="userAvatarBtn"
+                        type="button"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        aria-label="Lietotāja izvēlne"
+                    >
+                        <span class="user-avatar">
+                            <?php echo htmlspecialchars($initials); ?>
+                        </span>
+                    </button>
+
+                    <div class="user-dropdown" id="userDropdown">
+                        <div class="user-dropdown-head">
+                            <div class="user-dropdown-name">
+                                <?php echo htmlspecialchars($username ?: 'Lietotājs'); ?>
+                            </div>
+                            <div class="user-dropdown-role">
+                                <?php echo htmlspecialchars($userRole ?: ''); ?>
+                            </div>
+                        </div>
+
+                        <a href="<?php echo $profileUrl; ?>" class="user-dropdown-link">
+                            <i class="fas fa-gear"></i>
+                            <span>Profila opcijas</span>
+                        </a>
+
+                        <a href="<?php echo $base; ?>/auth/logout.php" class="user-dropdown-link user-dropdown-link--danger">
+                            <i class="fas fa-right-from-bracket"></i>
+                            <span>Iziet</span>
+                        </a>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <!-- MOBILE MENU BUTTON -->
+            <button
+                id="menu-btn"
                 class="menu-btn"
                 type="button"
                 aria-label="Atvērt izvēlni"
                 aria-controls="mainNav"
-                aria-expanded="false">
-            <i class="fas fa-bars" aria-hidden="true"></i>
-        </button>
+                aria-expanded="false"
+            >
+                <i class="fas fa-bars" aria-hidden="true"></i>
+            </button>
+        </div>
     </div>
 </header>
 
-<!-- Backdrop for mobile menu -->
 <div class="nav-backdrop" id="navBackdrop" hidden></div>
 
 <script>
 (function () {
+    // MOBILE MENU
     const btn = document.getElementById('menu-btn');
     const nav = document.getElementById('mainNav');
     const backdrop = document.getElementById('navBackdrop');
 
-    if (!btn || !nav) return;
-
     function openMenu() {
+        if (!btn || !nav) return;
         nav.classList.add('is-open');
         btn.setAttribute('aria-expanded', 'true');
         btn.setAttribute('aria-label', 'Aizvērt izvēlni');
         btn.innerHTML = '<i class="fas fa-xmark" aria-hidden="true"></i>';
-        if (backdrop) { backdrop.hidden = false; backdrop.classList.add('show'); }
+        if (backdrop) {
+            backdrop.hidden = false;
+            backdrop.classList.add('show');
+        }
         document.body.classList.add('nav-lock');
     }
 
     function closeMenu() {
+        if (!btn || !nav) return;
         nav.classList.remove('is-open');
         btn.setAttribute('aria-expanded', 'false');
         btn.setAttribute('aria-label', 'Atvērt izvēlni');
         btn.innerHTML = '<i class="fas fa-bars" aria-hidden="true"></i>';
-        if (backdrop) { backdrop.classList.remove('show'); backdrop.hidden = true; }
+        if (backdrop) {
+            backdrop.classList.remove('show');
+            backdrop.hidden = true;
+        }
         document.body.classList.remove('nav-lock');
     }
 
-    btn.addEventListener('click', () => {
-        const expanded = btn.getAttribute('aria-expanded') === 'true';
-        expanded ? closeMenu() : openMenu();
-    });
+    if (btn && nav) {
+        btn.addEventListener('click', function () {
+            const expanded = btn.getAttribute('aria-expanded') === 'true';
+            expanded ? closeMenu() : openMenu();
+        });
 
-    if (backdrop) backdrop.addEventListener('click', closeMenu);
+        if (backdrop) {
+            backdrop.addEventListener('click', closeMenu);
+        }
 
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && nav.classList.contains('is-open')) closeMenu();
-    });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && nav.classList.contains('is-open')) {
+                closeMenu();
+            }
+        });
 
-    nav.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
-        if (window.matchMedia('(max-width: 768px)').matches) closeMenu();
-    }));
+        nav.querySelectorAll('a').forEach(function (a) {
+            a.addEventListener('click', function () {
+                if (window.matchMedia('(max-width: 768px)').matches) {
+                    closeMenu();
+                }
+            });
+        });
 
-    window.addEventListener('resize', () => {
-        if (!window.matchMedia('(max-width: 768px)').matches) closeMenu();
-    });
+        window.addEventListener('resize', function () {
+            if (!window.matchMedia('(max-width: 768px)').matches) {
+                closeMenu();
+            }
+        });
+    }
+
+    // USER DROPDOWN
+    const avatarBtn = document.getElementById('userAvatarBtn');
+    const userMenu = document.getElementById('userMenu');
+
+    if (avatarBtn && userMenu) {
+        avatarBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const isOpen = userMenu.classList.toggle('open');
+            avatarBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!userMenu.contains(e.target)) {
+                userMenu.classList.remove('open');
+                avatarBtn.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                userMenu.classList.remove('open');
+                avatarBtn.setAttribute('aria-expanded', 'false');
+            }
+        });
+    }
 })();
 </script>

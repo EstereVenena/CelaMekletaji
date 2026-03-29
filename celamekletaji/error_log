@@ -1,0 +1,15 @@
+[17-Mar-2026 21:12:50 Europe/Riga] PHP Warning:  require(assets/header.php): Failed to open stream: No such file or directory in /home/grobina1/public_html/4pt/venena/celamekletaji/index.php on line 5
+[17-Mar-2026 21:12:50 Europe/Riga] PHP Fatal error:  Uncaught Error: Failed opening required 'assets/header.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/grobina1/public_html/4pt/venena/celamekletaji/index.php:5
+Stack trace:
+#0 {main}
+  thrown in /home/grobina1/public_html/4pt/venena/celamekletaji/index.php on line 5
+[17-Mar-2026 21:13:24 Europe/Riga] PHP Warning:  require(assets/header.php): Failed to open stream: No such file or directory in /home/grobina1/public_html/4pt/venena/celamekletaji/index.php on line 5
+[17-Mar-2026 21:13:24 Europe/Riga] PHP Fatal error:  Uncaught Error: Failed opening required 'assets/header.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/grobina1/public_html/4pt/venena/celamekletaji/index.php:5
+Stack trace:
+#0 {main}
+  thrown in /home/grobina1/public_html/4pt/venena/celamekletaji/index.php on line 5
+[17-Mar-2026 21:19:58 Europe/Riga] PHP Warning:  require(assets/footer.php): Failed to open stream: No such file or directory in /home/grobina1/public_html/4pt/venena/celamekletaji/index.php on line 207
+[17-Mar-2026 21:19:58 Europe/Riga] PHP Fatal error:  Uncaught Error: Failed opening required 'assets/footer.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/grobina1/public_html/4pt/venena/celamekletaji/index.php:207
+Stack trace:
+#0 {main}
+  thrown in /home/grobina1/public_html/4pt/venena/celamekletaji/index.php on line 207

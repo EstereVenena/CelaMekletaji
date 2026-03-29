@@ -1,6 +1,8 @@
 <?php
 session_start();
-require_once "assets/database.php";
+
+require_once __DIR__ . "/../includes/config/app.php";
+require_once __DIR__ . "/../includes/config/database.php";
 
 if (isset($_SESSION["lietotajs_id"])) {
     $stmt = $savienojums->prepare("
@@ -8,12 +10,24 @@ if (isset($_SESSION["lietotajs_id"])) {
         SET remember_token = NULL
         WHERE lietotajs_id = ?
     ");
-    $stmt->bind_param("i", $_SESSION["lietotajs_id"]);
-    $stmt->execute();
+
+    if ($stmt) {
+        $stmt->bind_param("i", $_SESSION["lietotajs_id"]);
+        $stmt->execute();
+        $stmt->close();
+    }
 }
 
-setcookie("remember_token", "", time() - 3600, "/");
+setcookie("remember_token", "", [
+    "expires" => time() - 3600,
+    "path" => "/",
+    "secure" => true,
+    "httponly" => true,
+    "samesite" => "Lax"
+]);
+
+$_SESSION = [];
+session_unset();
 session_destroy();
 
-header("Location: login.php");
-exit;
+redirect("public/about.php");

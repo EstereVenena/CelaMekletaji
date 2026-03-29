@@ -2,8 +2,8 @@
 $lapa = "Galerija";
 $title = "Galerijas pārvaldība";
 
-require "header.php";
-require_once "../assets/database.php";
+require __DIR__ . "/../../includes/templates/header.php";
+require __DIR__ . "/../../includes/config/database.php";
 
 
 ?>
@@ -24,7 +24,7 @@ require_once "../assets/database.php";
 
                 <div>
                     <label>Izvēlies attēlus:</label>
-                    <input type="file" name="images[]" accept="image/*" multiple required>
+                    <input type="file" name="images[]" accept="image/*,.zip" multiple required>
                 </div>
 
                 <div>
@@ -215,4 +215,4 @@ border-radius:10px;
 
 </style>
 
-<?php require "../assets/footer.php"; ?>
+<?php require __DIR__ . "/../../includes/templates/footer.php"; ?>
