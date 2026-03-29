@@ -2,9 +2,8 @@
 $lapa  = "Ceļa meklētāji";
 $title = "Ceļa meklētāji";
 
-// Fixed paths
-require "includes/templates/header.php";
-require_once "includes/config/database.php";
+require __DIR__ . "/includes/templates/header.php";
+require_once __DIR__ . "/includes/config/database.php";
 
 /* ===============================
    AKTUALITĀTES
@@ -101,8 +100,7 @@ if ($result) {
                                     <?= htmlspecialchars($item['description']) ?>
                                 </p>
                                 <div class="news-actions">
-                                    <a href="public/news.php?id=<?= $item['id'] ?>"
-                                       class="btn btn-primary btn-sm">
+                                    <a href="public/news.php?id=<?= $item['id'] ?>" class="btn btn-primary btn-sm">
                                         Lasīt
                                     </a>
                                 </div>
@@ -180,28 +178,28 @@ if ($result) {
         <div class="cards club-cards">
             <?php foreach ($clubs as $club): ?>
                 <article class="card club-card">
+                    <div class="club-card-head">
+                        <h3 class="club-card-title"><?= htmlspecialchars($club['name']) ?></h3>
 
-    <div class="club-top">
-        <h3><?= htmlspecialchars($club['name']) ?></h3>
+                        <span class="badge badge-gold club-badge">
+                            <?= htmlspecialchars($club['programs'] ?: 'Nav programmas') ?>
+                        </span>
+                    </div>
 
-        <span class="badge badge-gold">
-            <?= htmlspecialchars($club['programs'] ?? 'Nav programmas') ?>
-        </span>
+                    <p class="muted club-address">
+                        <i class="fas fa-location-dot"></i>
+                        <span><?= htmlspecialchars($club['address']) ?></span>
+                    </p>
 
-        <a class="link" href="public/clubs.php?id=<?= $club['id'] ?>">
-            Apskatīt →
-        </a>
-    </div>
-
-    <p class="muted club-address">
-        <i class="fas fa-location-dot"></i>
-        <?= htmlspecialchars($club['address']) ?>
-    </p>
-
-</article>
+                    <div class="club-card-actions">
+                        <a class="link club-link" href="public/clubs.php?id=<?= $club['id'] ?>">
+                            Apskatīt →
+                        </a>
+                    </div>
+                </article>
             <?php endforeach; ?>
         </div>
     </div>
 </section>
 
-<?php require "includes/templates/footer.php"; ?> <!-- Fixed this line -->
+<?php require __DIR__ . "/includes/templates/footer.php"; ?>

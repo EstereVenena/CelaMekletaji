@@ -1,5 +1,4 @@
 <?php
-    $base = '/4pt/venena/celamekletaji';
     $lapa = "Par mums";
     $title = "Par mums | Ceļa meklētāji";
     require __DIR__ . "/../includes/templates/header.php";
@@ -37,7 +36,7 @@
                 aria-label="Atvērt aprakstu: Ceļa meklētāji"
                 data-title="Ceļa meklētāji"
                 data-subtitle="10–15 gadi"
-                data-img="<?php echo $base; ?>/assets/images/logos/CM.png"
+                data-img="images/CM.png"
                 data-text="Ceļa meklētāji ir vieta, kur jaunieši ne tikai pavada laiku, bet atrod virzienu. Tā ir Septītās dienas adventistu jauniešu organizācija pusaudžiem (aptuveni 10–15 g.), kur piedzīvojums satiekas ar vērtībām, draudzība ar atbildību, un jautājumi par dzīvi – ar jēgpilnām atbildēm. Šeit katrs jaunietis ir gaidīts, pamanīts un iedrošināts augt.
 
 Ceļa meklētāju nodarbības ir dzīvas un daudzpusīgas – pārgājieni, nometnes, komandas izaicinājumi, praktiskas prasmes, radoši uzdevumi un kalpošana citiem. Tas viss notiek vidē, kur jaunietis mācās sadarboties, uzticēties, uzņemties atbildību un attīstīt līdera dotības. Tā nav tikai “aktivitāšu kopa” – tā ir pieredze, kas veido raksturu un pašapziņu.
@@ -47,7 +46,7 @@ Organizācijas galvenais mērķis ir palīdzēt jauniešiem izaugt par nobriedu�
 
                 <div class="program-head">
                     <div class="program-logo">
-                        <img src="<?php echo $base; ?>/assets/images/logos/CM.png" alt="Ceļa meklētāji">
+                        <img src="images/CM.png" alt="Ceļa meklētāji">
                     </div>
                     <span class="program-badge">10–15 gadi</span>
                 </div>
@@ -62,7 +61,7 @@ Organizācijas galvenais mērķis ir palīdzēt jauniešiem izaugt par nobriedu�
                 aria-label="Atvērt aprakstu: Piedzīvojumu meklētāji"
                 data-title="Piedzīvojumu meklētāji"
                 data-subtitle="5–9 gadi"
-                data-img="<?php echo $base; ?>/assets/images/logos/PM.png"
+                data-img="images/PM.png"
                 data-text="Piedzīvojumu meklētāji ir droša un draudzīga vide bērniem, kur mācīšanās notiek caur spēli, radošumu un kopā būšanu. Šī programma palīdz bērnam veidot labus ieradumus, attīstīt prasmes un augt ar pārliecību, ka viņš ir vērtīgs un mīlēts.
 
 Nodarbībās bērni iepazīst dabu, mācās vienkāršas dzīves prasmes, veido draudzību, piedalās komandas uzdevumos un attīsta radošumu. Tas viss notiek kopā ar ģimeni un vadītājiem, kuri palīdz bērnam ieraudzīt lielo bildi — ka rūpes, laipnība un atbildība ir spēks.
@@ -72,7 +71,7 @@ Programmas mērķis ir stiprināt bērna raksturu, ģimenes vērtības un ielikt
 
                 <div class="program-head">
                     <div class="program-logo">
-                        <img src="<?php echo $base; ?>/assets/images/logos/PM.png" alt="Piedzīvojumu meklētāji">
+                        <img src="images/PM.png" alt="Piedzīvojumu meklētāji">
                     </div>
                     <span class="program-badge">5–9 gadi</span>
                 </div>
@@ -87,7 +86,7 @@ Programmas mērķis ir stiprināt bērna raksturu, ģimenes vērtības un ielikt
                 aria-label="Atvērt aprakstu: Mastergaidi"
                 data-title="Mastergaidi"
                 data-subtitle="Vadītāju programma"
-                data-img="<?php echo $base; ?>/assets/images/logos/MG.png"
+                data-img="images/MG.png"
                 data-text="Mastergaidi ir vadītāju izaugsmes un apmācību programma tiem, kas vēlas ne tikai piedalīties, bet arī vadīt, iedvesmot un kalpot. Tā palīdz attīstīt līdera prasmes, darbu ar jauniešiem un spēju organizēt jēgpilnas aktivitātes — ar skaidru vērtību pamatu.
 
 Programma ietver apmācības, praktiskus uzdevumus, projektu vadību, komandas darbu un personīgo disciplīnu. Mastergaidi mācās plānot nometnes, pārgājienus, nodarbības, kā arī attīstīt komunikāciju un atbildību — lai vadība būtu droša, profesionāla un cilvēcīga.
@@ -97,7 +96,7 @@ Mērķis ir sagatavot nobriedušus un uzticamus vadītājus, kuri prot iedrošin
 
                 <div class="program-head">
                     <div class="program-logo">
-                        <img src="<?php echo $base; ?>/assets/images/logos/MG.png" alt="Mastergaidi">
+                        <img src="images/MG.png" alt="Mastergaidi">
                     </div>
                     <span class="program-badge" style="background: rgba(30,79,161,.14); border-color: rgba(30,79,161,.28); color: var(--blue-800);">Vadītāji</span>
                 </div>
@@ -112,7 +111,7 @@ Mērķis ir sagatavot nobriedušus un uzticamus vadītājus, kuri prot iedrošin
                 aria-label="Atvērt aprakstu: Vēstneši"
                 data-title="Vēstneši"
                 data-subtitle="16+"
-                data-img="<?php echo $base; ?>/assets/images/logos/vestnesi.png"
+                data-img="images/vestnesi.png"
                 data-text="Vēstneši ir jauniešu programma tiem, kas ir gatavi spert nākamo soli: kļūt patstāvīgākiem, stiprākiem un apzinātākiem. Tā ir vide, kur sarunas kļūst dziļākas, atbildība lielāka un mērķi — skaidrāki.
 
 Šeit jaunieši attīsta dzīves prasmes, mācās komandas darbu, līderību, kalpošanu un savu talantu pielietošanu. Vēstneši bieži iesaistās projektos, palīdz organizēt pasākumus, atbalsta jaunākās grupas un veido iniciatīvas, kas ietekmē kopienu.
@@ -122,7 +121,7 @@ Programmas mērķis ir palīdzēt jaunietim atrast savu balsi un virzienu, iemā
 
                 <div class="program-head">
                     <div class="program-logo">
-                        <img src="<?php echo $base; ?>/assets/images/logos/vestnesi.png" alt="Vēstneši">
+                        <img src="images/vestnesi.png" alt="Vēstneši">
                     </div>
                     <span class="program-badge" style="background: rgba(198,40,40,.16); border-color: rgba(198,40,40,.28); color: var(--red);">16+</span>
                 </div>
@@ -137,7 +136,7 @@ Programmas mērķis ir palīdzēt jaunietim atrast savu balsi un virzienu, iemā
                 aria-label="Atvērt aprakstu: Mazie jēriņi"
                 data-title="Mazie jēriņi"
                 data-subtitle="4+"
-                data-img="<?php echo $base; ?>/assets/images/logos/jerini.png"
+                data-img="images/jerini.png"
                 data-text="Mazie jēriņi ir programma pašiem mazākajiem, kur galvenais ir siltums, drošība un prieks mācīties. Tā palīdz bērniem attīstīt zinātkāri, valodu, uztveri un vienkāršas prasmes, kas noder ikdienā.
 
 Nodarbības notiek rotaļīgi: dziesmas, stāsti, radoši darbi, kustības un vienkārši uzdevumi. Bērni mācās sadarboties, dalīties, klausīties un veidot labus ieradumus — bez spiediena, bet ar iedrošinājumu.
@@ -147,7 +146,7 @@ Programmas mērķis ir ielikt pamatu: ka pasaule ir izzināma, cilvēki ir mīle
 
                 <div class="program-head">
                     <div class="program-logo">
-                        <img src="<?php echo $base; ?>/assets/images/logos/jerini.png" alt="Mazie jēriņi">
+                        <img src="images/jerini.png" alt="Mazie jēriņi">
                     </div>
                     <span class="program-badge">4+</span>
                 </div>
