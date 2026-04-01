@@ -2,7 +2,7 @@
 $lapa = "Galerija";
 $title = "Galerijas pārvaldība";
 
-require __DIR__ . "/../../includes/templates/header.php";
+require __DIR__ . "/../../includes/templates/header-admin.php";
 require __DIR__ . "/../../includes/config/database.php";
 
 

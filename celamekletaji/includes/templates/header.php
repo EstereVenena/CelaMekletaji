@@ -3,7 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-$base = '/4pt/venena/celamekletaji';
+require_once __DIR__ . '/../config/app.php';
 
 $isLoggedIn = isset($_SESSION["lietotajs_id"]);
 $username = trim($_SESSION["lietotajvards"] ?? '');
@@ -22,14 +22,14 @@ if ($username !== '') {
 }
 
 // Profila saite pēc lomas
-$profileUrl = $base . '/dashboards/user.php';
+$profileUrl = BASE_URL . 'dashboards/user.php';
 
 if ($userRole === 'admin') {
-    $profileUrl = $base . '/dashboards/admin.php';
+    $profileUrl = BASE_URL . 'dashboards/admin.php';
 } elseif ($userRole === 'moderators') {
-    $profileUrl = $base . '/dashboards/moderator.php';
+    $profileUrl = BASE_URL . 'dashboards/moderator.php';
 } elseif ($userRole === 'Vecāks' || $userRole === 'parent') {
-    $profileUrl = $base . '/dashboards/parent.php';
+    $profileUrl = BASE_URL . 'dashboards/parent.php';
 }
 ?>
 <!DOCTYPE html>
@@ -39,7 +39,7 @@ if ($userRole === 'admin') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($title ?? 'Ceļa meklētāji'); ?></title>
 
-    <link rel="stylesheet" href="<?php echo $base; ?>/assets/css/style.css">
+    <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
@@ -48,8 +48,8 @@ if ($userRole === 'admin') {
     <div class="container nav-container">
 
         <!-- LOGO -->
-        <a href="<?php echo $base; ?>/index.php" class="logo" aria-label="Uz sākumu">
-            <img src="<?php echo $base; ?>/assets/images/logos/logo.png" alt="Ceļa meklētāji logo">
+        <a href="<?= BASE_URL ?>index.php" class="logo" aria-label="Uz sākumu">
+            <img src="<?= BASE_URL ?>assets/images/logos/logo.png" alt="Ceļa meklētāji logo">
             <span>Ceļa meklētāji</span>
         </a>
 
@@ -60,17 +60,17 @@ if ($userRole === 'admin') {
 
         <!-- NAV -->
         <nav class="main-nav" id="mainNav" aria-label="Galvenā navigācija">
-            <a href="<?php echo $base; ?>/index.php">Sākums</a>
-            <a href="<?php echo $base; ?>/public/about.php">Par mums</a>
-            <a href="<?php echo $base; ?>/public/gallery.php">Galerija</a>
-            <a href="<?php echo $base; ?>/public/clubs.php">Klubi</a>
+            <a href="<?= BASE_URL ?>index.php">Sākums</a>
+            <a href="<?= BASE_URL ?>public/about.php">Par mums</a>
+            <a href="<?= BASE_URL ?>public/gallery.php">Galerija</a>
+            <a href="<?= BASE_URL ?>public/clubs.php">Klubi</a>
         </nav>
 
         <!-- RIGHT SIDE -->
         <div class="nav-right">
 
             <?php if (!$isLoggedIn): ?>
-                <a href="<?php echo $base; ?>/auth/login.php" class="nav-link nav-cta" aria-label="Pieslēgties">
+                <a href="<?= BASE_URL ?>auth/login.php" class="nav-link nav-cta" aria-label="Pieslēgties">
                     <i class="fas fa-user"></i>
                     <span class="nav-cta-text">Pievienoties</span>
                 </a>
@@ -104,7 +104,7 @@ if ($userRole === 'admin') {
                             <span>Profila opcijas</span>
                         </a>
 
-                        <a href="<?php echo $base; ?>/auth/logout.php" class="user-dropdown-link user-dropdown-link--danger">
+                        <a href="<?= BASE_URL ?>auth/logout.php" class="user-dropdown-link user-dropdown-link--danger">
                             <i class="fas fa-right-from-bracket"></i>
                             <span>Iziet</span>
                         </a>
