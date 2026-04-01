@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-$lapa  = "Ceļa meklētāju klubi Latvijā";
+$lapa  = "Klubi Latvijā";
 $title = "Klubi | Ceļa meklētāji";
 $selectedClubId = isset($_GET['id']) ? (string)$_GET['id'] : '';
 

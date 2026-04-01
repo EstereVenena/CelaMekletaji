@@ -14,9 +14,10 @@ $newsSql = "
     FROM cm_news
     WHERE is_active = 1
     ORDER BY publish_date DESC
-    LIMIT 5
+    LIMIT 8
 ";
 $result = $savienojums->query($newsSql);
+
 if ($result) {
     while ($row = $result->fetch_assoc()) {
         $news[] = $row;
@@ -37,11 +38,12 @@ $clubsSql = "
     LEFT JOIN cm_club_programs cp ON c.id = cp.club_id
     LEFT JOIN cm_programs p ON cp.program_id = p.id
     WHERE c.is_active = 1
-    GROUP BY c.id
+    GROUP BY c.id, c.name, c.address
     ORDER BY c.address
     LIMIT 4
 ";
 $result = $savienojums->query($clubsSql);
+
 if ($result) {
     while ($row = $result->fetch_assoc()) {
         $clubs[] = $row;
@@ -80,46 +82,54 @@ if ($result) {
             </a>
         </header>
 
-        <div class="carousel one" id="newsCarousel">
-            <div class="carousel-viewport">
-                <div class="carousel-track" id="carouselTrack">
+        <?php if (!empty($news)): ?>
+            <div class="carousel one" id="newsCarousel">
+                <div class="carousel-viewport">
+                    <div class="carousel-track" id="carouselTrack">
+                        <?php foreach ($news as $item): ?>
+                            <article class="carousel-slide">
+                                <div class="news-card">
+                                    <div class="news-meta">
+                                        <span class="news-tag">
+                                            <?= htmlspecialchars($item['category']) ?>
+                                        </span>
+                                        <span class="news-date">
+                                            <?= htmlspecialchars(date('d.m.Y', strtotime($item['publish_date']))) ?>
+                                        </span>
+                                    </div>
 
-                    <?php foreach ($news as $item): ?>
-                        <article class="carousel-slide">
-                            <div class="news-card">
-                                <div class="news-meta">
-                                    <span class="news-tag">
-                                        <?= htmlspecialchars($item['category']) ?>
-                                    </span>
-                                    <span class="news-date">
-                                        <?= htmlspecialchars($item['publish_date']) ?>
-                                    </span>
-                                </div>
-                                <h3><?= htmlspecialchars($item['title']) ?></h3>
-                                <p class="muted">
-                                    <?= htmlspecialchars($item['description']) ?>
-                                </p>
-                                <div class="news-actions">
-                                    <a href="public/news.php?id=<?= $item['id'] ?>" class="btn btn-primary btn-sm">
-                                        Lasīt
-                                    </a>
-                                </div>
-                            </div>
-                        </article>
-                    <?php endforeach; ?>
+                                    <h3><?= htmlspecialchars($item['title']) ?></h3>
 
+                                    <p class="muted">
+                                        <?= htmlspecialchars(mb_strimwidth($item['description'], 0, 170, '...')) ?>
+                                    </p>
+
+                                    <div class="news-actions">
+                                        <a href="public/news.php?id=<?= (int)$item['id'] ?>" class="btn btn-primary btn-sm">
+                                            Lasīt vairāk
+                                        </a>
+                                    </div>
+                                </div>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
+
+                <button class="carousel-btn prev" type="button" aria-label="Iepriekšējā aktualitāte">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+
+                <button class="carousel-btn next" type="button" aria-label="Nākamā aktualitāte">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+
+                <div class="carousel-dots" id="carouselDots"></div>
             </div>
-
-            <button class="carousel-btn prev" type="button">
-                <i class="fas fa-chevron-left"></i>
-            </button>
-            <button class="carousel-btn next" type="button">
-                <i class="fas fa-chevron-right"></i>
-            </button>
-
-            <div class="carousel-dots" id="carouselDots"></div>
-        </div>
+        <?php else: ?>
+            <div class="card">
+                <p class="muted">Šobrīd nav pieejamu aktualitāšu.</p>
+            </div>
+        <?php endif; ?>
     </div>
 </section>
 
@@ -192,7 +202,7 @@ if ($result) {
                     </p>
 
                     <div class="club-card-actions">
-                        <a class="link club-link" href="public/clubs.php?id=<?= $club['id'] ?>">
+                        <a class="link club-link" href="public/clubs.php?id=<?= (int)$club['id'] ?>">
                             Apskatīt →
                         </a>
                     </div>
@@ -201,5 +211,127 @@ if ($result) {
         </div>
     </div>
 </section>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const carousel = document.getElementById("newsCarousel");
+    const track = document.getElementById("carouselTrack");
+    const dotsContainer = document.getElementById("carouselDots");
+
+    if (!carousel || !track) return;
+
+    let slides = Array.from(track.children);
+    const prevBtn = carousel.querySelector(".prev");
+    const nextBtn = carousel.querySelector(".next");
+
+    let index = 1;
+    let autoplay = null;
+
+    // 🔁 Clone first & last
+    const firstClone = slides[0].cloneNode(true);
+    const lastClone = slides[slides.length - 1].cloneNode(true);
+
+    track.appendChild(firstClone);
+    track.insertBefore(lastClone, slides[0]);
+
+    slides = Array.from(track.children);
+
+    function setSlideWidths() {
+        slides.forEach(slide => {
+            slide.style.flex = "0 0 100%";
+        });
+    }
+
+    function moveToIndex(withTransition = true) {
+        if (!withTransition) {
+            track.style.transition = "none";
+        } else {
+            track.style.transition = "transform 0.45s ease";
+        }
+
+        track.style.transform = `translateX(-${index * 100}%)`;
+    }
+
+    function renderDots() {
+        dotsContainer.innerHTML = "";
+
+        for (let i = 0; i < slides.length - 2; i++) {
+            const dot = document.createElement("button");
+            dot.className = "dot" + (i === index - 1 ? " active" : "");
+
+            dot.addEventListener("click", function () {
+                index = i + 1;
+                moveToIndex();
+                restartAutoplay();
+            });
+
+            dotsContainer.appendChild(dot);
+        }
+    }
+
+    function nextSlide() {
+        index++;
+        moveToIndex();
+    }
+
+    function prevSlide() {
+        index--;
+        moveToIndex();
+    }
+
+    track.addEventListener("transitionend", () => {
+        if (index === slides.length - 1) {
+            index = 1;
+            moveToIndex(false);
+        }
+
+        if (index === 0) {
+            index = slides.length - 2;
+            moveToIndex(false);
+        }
+
+        renderDots();
+    });
+
+    function startAutoplay() {
+        stopAutoplay();
+        autoplay = setInterval(nextSlide, 4500);
+    }
+
+    function stopAutoplay() {
+        if (autoplay) {
+            clearInterval(autoplay);
+            autoplay = null;
+        }
+    }
+
+    function restartAutoplay() {
+        stopAutoplay();
+        startAutoplay();
+    }
+
+    if (nextBtn) {
+        nextBtn.addEventListener("click", () => {
+            nextSlide();
+            restartAutoplay();
+        });
+    }
+
+    if (prevBtn) {
+        prevBtn.addEventListener("click", () => {
+            prevSlide();
+            restartAutoplay();
+        });
+    }
+
+    carousel.addEventListener("mouseenter", stopAutoplay);
+    carousel.addEventListener("mouseleave", startAutoplay);
+
+    setSlideWidths();
+    moveToIndex(false);
+    renderDots();
+    startAutoplay();
+});
+</script>
 
 <?php require __DIR__ . "/includes/templates/footer.php"; ?>

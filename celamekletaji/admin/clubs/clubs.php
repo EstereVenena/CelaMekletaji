@@ -2,8 +2,8 @@
 $lapa  = "Klubi";
 $title = "Klubi";
 
-require "header.php";
-require_once "../assets/database.php";
+require_once __DIR__ . "/../../includes/config/database.php";
+require_once __DIR__ . "/../../includes/templates/header-admin.php";
 
 $clubs = [];
 
@@ -169,4 +169,4 @@ document.getElementById("clubModal").style.display="none";
 
 </script>
 
-<?php require "../assets/footer.php"; ?>
+<?php require __DIR__ . "/../../includes/templates/footer.php"; ?>

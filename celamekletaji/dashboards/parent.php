@@ -4,7 +4,6 @@ session_start();
 $lapa  = "Vecāku panelis";
 $title = "Vecāku panelis - Ceļa meklētāji";
 
-require __DIR__ . "/../includes/templates/header.php";
 require_once __DIR__ . "/../includes/config/database.php";
 
 // Check if user is logged in and is a parent
@@ -12,6 +11,8 @@ if (!isset($_SESSION["lietotajs_id"]) || ($_SESSION["loma"] ?? "") !== "Vecāks"
     header("Location: ../auth/login.php");
     exit();
 }
+
+require __DIR__ . "/../includes/templates/header-parent.php";
 
 // Get parent's children information (placeholder)
 $children = [];

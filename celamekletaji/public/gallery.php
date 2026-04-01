@@ -1,5 +1,5 @@
 <?php
-    $lapa = "Ceļa meklētāju galerija";
+    $lapa = "Galerija";
     $title = "Galerija | Ceļa meklētāji";
     require __DIR__ . "/../includes/templates/header.php";
 require_once __DIR__ . "/../includes/config/database.php";
