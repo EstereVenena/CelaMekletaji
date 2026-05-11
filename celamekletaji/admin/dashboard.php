@@ -1,9 +1,16 @@
 <?php
+session_start();
+
 $lapa  = "Admin Panelis";
 $title = "Admin Panelis";
 
-require "header.php";
 require_once "../assets/database.php";
+
+// Tikai admin lietotājam
+if (!isset($_SESSION["lietotajs_id"]) || ($_SESSION["loma"] ?? "") !== "admin") {
+    header("Location: ../auth/login.php");
+    exit();
+}
 
 /* ===============================
    KLUBI
@@ -18,7 +25,7 @@ $clubsSql = "
     FROM cm_clubs c
     LEFT JOIN cm_club_programs cp ON c.id = cp.club_id
     LEFT JOIN cm_programs p ON cp.program_id = p.id
-    GROUP BY c.id
+    GROUP BY c.id, c.name, c.address
     ORDER BY c.address
 ";
 $result = $savienojums->query($clubsSql);
@@ -28,110 +35,6 @@ if ($result) {
         $clubs[] = $row;
     }
 }
-
-<!DOCTYPE html>
-<html lang="lv">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $title; ?></title>
-
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-</head>
-<body>
-
-<header class="prof-header">
-    <div class="header-container">
-
-        <!-- Brand block: clickable to admin home -->
-        <a href="index.php" class="brand-block" aria-label="Uz admin sākumu">
-            <div class="brand-logo">
-                <img src="../images/logo.png" class="logo" alt="Ceļa meklētāji">
-            </div>
-            <div class="brand-meta">
-                <div class="brand-name">Admin</div>
-                <div class="brand-sub">Ceļa meklētāji</div>
-            </div>
-        </a>
-
-        <!-- Page title -->
-        <h1 class="header-title"><?php echo $lapa; ?></h1>
-
-        <nav class="main-nav" id="mainNav" aria-label="Admin navigācija">
-            <a href="index.php" class="nav-link">Sākums</a>
-            <a href="news_manage.php" class="nav-link">Jaunumi</a>
-            <a href="news.php">Aktualitātes</a>
-            <a href="clubs_manage.php" class="nav-link">Klubi</a>
-            <a href="gallery.php" class="nav-link">Galerija</a>
-            <a href="users_manage.php" class="nav-link">Lietotāji</a>
-            <a href="../index.php" class="nav-link nav-cta" aria-label="Iziet">
-                <i class="fas fa-sign-out-alt"></i>
-                <span class="nav-cta-text">Iziet</span>
-            </a>
-        </nav>
-
-        <button id="menu-btn"
-                class="menu-btn"
-                type="button"
-                aria-label="Atvērt izvēlni"
-                aria-controls="mainNav"
-                aria-expanded="false">
-            <i class="fas fa-bars" aria-hidden="true"></i>
-        </button>
-    </div>
-</header>
-
-<!-- Backdrop for mobile menu -->
-<div class="nav-backdrop" id="navBackdrop" hidden></div>
-
-<script>
-(function () {
-    const btn = document.getElementById('menu-btn');
-    const nav = document.getElementById('mainNav');
-    const backdrop = document.getElementById('navBackdrop');
-
-    if (!btn || !nav) return;
-
-    function openMenu() {
-        nav.classList.add('is-open');
-        btn.setAttribute('aria-expanded', 'true');
-        btn.setAttribute('aria-label', 'Aizvērt izvēlni');
-        btn.innerHTML = '<i class="fas fa-xmark" aria-hidden="true"></i>';
-        if (backdrop) { backdrop.hidden = false; backdrop.classList.add('show'); }
-        document.body.classList.add('nav-lock');
-    }
-
-    function closeMenu() {
-        nav.classList.remove('is-open');
-        btn.setAttribute('aria-expanded', 'false');
-        btn.setAttribute('aria-label', 'Atvērt izvēlni');
-        btn.innerHTML = '<i class="fas fa-bars" aria-hidden="true"></i>';
-        if (backdrop) { backdrop.classList.remove('show'); backdrop.hidden = true; }
-        document.body.classList.remove('nav-lock');
-    }
-
-    btn.addEventListener('click', () => {
-        const expanded = btn.getAttribute('aria-expanded') === 'true';
-        expanded ? closeMenu() : openMenu();
-    });
-
-    if (backdrop) backdrop.addEventListener('click', closeMenu);
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && nav.classList.contains('is-open')) closeMenu();
-    });
-
-    nav.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
-        if (window.matchMedia('(max-width: 768px)').matches) closeMenu();
-    }));
-
-    window.addEventListener('resize', () => {
-        if (!window.matchMedia('(max-width: 768px)').matches) closeMenu();
-    });
-})();
-</script>
-
 
 /* ===============================
    GALERIJA
@@ -150,6 +53,8 @@ if ($result) {
         $gallery[] = $row;
     }
 }
+
+require "header.php";
 ?>
 
 <!-- ===============================
@@ -163,35 +68,41 @@ if ($result) {
         </header>
 
         <div class="cards club-cards">
-            <?php foreach ($clubs as $club): ?>
-                <article class="card club-card">
+            <?php if (!empty($clubs)): ?>
+                <?php foreach ($clubs as $club): ?>
+                    <article class="card club-card">
 
-                    <h3><?= htmlspecialchars($club['name']) ?></h3>
+                        <h3><?= htmlspecialchars($club['name']) ?></h3>
 
-                    <span class="badge badge-gold">
-                        <?= htmlspecialchars($club['programs'] ?? 'Nav programmas') ?>
-                    </span>
+                        <span class="badge badge-gold">
+                            <?= htmlspecialchars($club['programs'] ?? 'Nav programmas') ?>
+                        </span>
 
-                    <p class="muted">
-                        <i class="fas fa-location-dot"></i>
-                        <?= htmlspecialchars($club['address']) ?>
-                    </p>
+                        <p class="muted">
+                            <i class="fas fa-location-dot"></i>
+                            <?= htmlspecialchars($club['address']) ?>
+                        </p>
 
-                    <div class="news-actions">
-                        <a href="edit_club.php?id=<?= $club['id'] ?>" 
-                           class="btn btn-outline btn-sm">
-                           Rediģēt
-                        </a>
+                        <div class="news-actions">
+                            <a href="edit_club.php?id=<?= (int)$club['id'] ?>" 
+                               class="btn btn-outline btn-sm">
+                               Rediģēt
+                            </a>
 
-                        <a href="delete_club.php?id=<?= $club['id'] ?>" 
-                           class="btn btn-red btn-sm"
-                           onclick="return confirm('Vai tiešām dzēst šo klubu?')">
-                           Dzēst
-                        </a>
-                    </div>
+                            <a href="delete_club.php?id=<?= (int)$club['id'] ?>" 
+                               class="btn btn-red btn-sm"
+                               onclick="return confirm('Vai tiešām dzēst šo klubu?')">
+                               Dzēst
+                            </a>
+                        </div>
 
-                </article>
-            <?php endforeach; ?>
+                    </article>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <div class="card">
+                    <p class="muted">Nav pievienotu klubu.</p>
+                </div>
+            <?php endif; ?>
         </div>
 
         <div style="margin-top:1rem;">
@@ -228,7 +139,7 @@ if ($result) {
 
                 <div>
                     <label>Gads:</label>
-                    <input type="number" name="year" placeholder="2024" required>
+                    <input type="number" name="year" placeholder="2026" required>
                 </div>
 
                 <div>
@@ -247,7 +158,40 @@ if ($result) {
 
             </div>
         </form>
+
+        <?php if (!empty($gallery)): ?>
+            <div class="cards">
+                <?php foreach ($gallery as $image): ?>
+                    <article class="card">
+                        <img 
+                            src="<?= htmlspecialchars($image['path']) ?>" 
+                            alt="<?= htmlspecialchars($image['filename']) ?>"
+                            style="width:100%; max-height:220px; object-fit:cover; border-radius:12px;"
+                        >
+
+                        <h3><?= htmlspecialchars($image['filename']) ?></h3>
+
+                        <p class="muted">
+                            <?= htmlspecialchars($image['year']) ?> |
+                            <?= htmlspecialchars($image['creator']) ?> |
+                            <?= htmlspecialchars($image['category'] ?? '') ?>
+                        </p>
+
+                        <a href="delete_gallery.php?id=<?= (int)$image['id'] ?>"
+                           class="btn btn-red btn-sm"
+                           onclick="return confirm('Vai tiešām dzēst šo attēlu?')">
+                           Dzēst
+                        </a>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <div class="card">
+                <p class="muted">Galerijā vēl nav attēlu.</p>
+            </div>
+        <?php endif; ?>
+
     </div>
 </section>
 
-<?php require "../assets/footer.php";?>
+<?php require "../assets/footer.php"; ?>

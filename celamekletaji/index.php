@@ -86,32 +86,32 @@ if ($result) {
             <div class="carousel one" id="newsCarousel">
                 <div class="carousel-viewport">
                     <div class="carousel-track" id="carouselTrack">
-                        <?php foreach ($news as $item): ?>
-                            <article class="carousel-slide">
-                                <div class="news-card">
-                                    <div class="news-meta">
-                                        <span class="news-tag">
-                                            <?= htmlspecialchars($item['category']) ?>
-                                        </span>
-                                        <span class="news-date">
-                                            <?= htmlspecialchars(date('d.m.Y', strtotime($item['publish_date']))) ?>
-                                        </span>
-                                    </div>
+                      <?php foreach ($news as $item): ?>
+    <article class="carousel-slide">
+        <div class="news-card">
+            <div class="news-meta">
+                <span class="news-tag">
+                    <?= htmlspecialchars($item['category']) ?>
+                </span>
+                <span class="news-date">
+                    <?= htmlspecialchars(date('d.m.Y', strtotime($item['publish_date']))) ?>
+                </span>
+            </div>
 
-                                    <h3><?= htmlspecialchars($item['title']) ?></h3>
+            <h3><?= htmlspecialchars($item['title']) ?></h3>
 
-                                    <p class="muted">
-                                        <?= htmlspecialchars(mb_strimwidth($item['description'], 0, 170, '...')) ?>
-                                    </p>
+            <p class="muted">
+                <?= htmlspecialchars(mb_strimwidth($item['description'], 0, 170, '...')) ?>
+            </p>
 
-                                    <div class="news-actions">
-                                        <a href="public/news.php?id=<?= (int)$item['id'] ?>" class="btn btn-primary btn-sm">
-                                            Lasīt vairāk
-                                        </a>
-                                    </div>
-                                </div>
-                            </article>
-                        <?php endforeach; ?>
+            <div class="news-actions">
+                <a href="public/news_single.php?id=<?= (int)$item['id'] ?>" class="btn btn-primary btn-sm">
+                    Lasīt vairāk
+                </a>
+            </div>
+        </div>
+    </article>
+<?php endforeach; ?>
                     </div>
                 </div>
 

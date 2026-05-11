@@ -6,16 +6,54 @@ $title = "Vecāku panelis - Ceļa meklētāji";
 
 require_once __DIR__ . "/../includes/config/database.php";
 
-// Check if user is logged in and is a parent
+// Pārbauda, vai lietotājs ir ielogojies un ir Vecāks
 if (!isset($_SESSION["lietotajs_id"]) || ($_SESSION["loma"] ?? "") !== "Vecāks") {
     header("Location: ../auth/login.php");
     exit();
 }
 
-require __DIR__ . "/../includes/templates/header-parent.php";
-
-// Get parent's children information (placeholder)
+$parentId = (int) ($_SESSION["lietotajs_id"] ?? 0);
 $children = [];
+$error = null;
+
+// Ielādē bērnus, kas piesaistīti konkrētajam vecākam
+$sql = "
+    SELECT 
+        c.lietotajs_id,
+        c.lietotajvards,
+        c.vards,
+        c.uzvards,
+        c.epasts,
+        c.loma,
+        c.statuss,
+        c.Reg_datums
+    FROM cm_parent_children pc
+    INNER JOIN cm_lietotaji c 
+        ON c.lietotajs_id = pc.child_id
+    WHERE pc.parent_id = ?
+      AND c.statuss <> 'dzēsts'
+    ORDER BY c.vards ASC, c.uzvards ASC
+";
+
+if ($stmt = $savienojums->prepare($sql)) {
+    $stmt->bind_param("i", $parentId);
+
+    if ($stmt->execute()) {
+        $result = $stmt->get_result();
+
+        while ($row = $result->fetch_assoc()) {
+            $children[] = $row;
+        }
+    } else {
+        $error = "Neizdevās ielādēt bērnu sarakstu.";
+    }
+
+    $stmt->close();
+} else {
+    $error = "Neizdevās sagatavot SQL vaicājumu.";
+}
+
+require __DIR__ . "/../includes/templates/header-parent.php";
 ?>
 
 <main class="dashboard-main">
@@ -32,20 +70,26 @@ $children = [];
                 <p class="muted small">Loma: <strong>Vecāks</strong></p>
             </div>
             <div style="display:flex; gap:.6rem; align-items:center;">
-                <a class="btn btn-primary btn-sm" href="../auth/register.php">Pievienot bērnu</a>
+                <a class="btn btn-primary btn-sm" href="../children/add.php">Pievienot bērnu</a>
             </div>
         </div>
 
+        <?php if ($error): ?>
+            <div class="dashboard-card">
+                <p class="muted"><?php echo htmlspecialchars($error); ?></p>
+            </div>
+        <?php endif; ?>
+
         <div class="dashboard-content">
             <div class="dashboard-card">
-                <h3>Mani bērni</h3>
+                <h3>Mani bērni (<?php echo count($children); ?>)</h3>
                 <p class="muted">Pārvaldīt jūsu bērnu informāciju un redzēt viņu dalību klubos.</p>
 
                 <?php if (empty($children)): ?>
                     <div class="divider"></div>
                     <p class="muted">
                         Pagaidām nav pievienotu bērnu.
-                        <a class="link" href="../auth/register.php">Pievienot bērnu</a>
+                        <a class="link" href="../children/add.php">Pievienot bērnu</a>
                     </p>
                 <?php else: ?>
                     <div class="divider"></div>
@@ -57,18 +101,40 @@ $children = [];
                                         <div class="program-logo">
                                             <img src="../assets/images/avatar-placeholder.png" alt="avatar">
                                         </div>
+
                                         <div>
-                                            <h4 style="margin:0"><?php echo htmlspecialchars($child['vards'] ?? 'Bērns'); ?></h4>
-                                            <p class="muted small">
-                                                <?php echo htmlspecialchars($child['vecums'] ?? '—'); ?>
-                                                •
-                                                <?php echo htmlspecialchars($child['klubi'] ?? 'Nav klubu'); ?>
+                                            <h4 style="margin:0;">
+                                                <?php echo htmlspecialchars(($child['vards'] ?? '') . ' ' . ($child['uzvards'] ?? '')); ?>
+                                            </h4>
+
+                                            <p class="muted small" style="margin:.2rem 0 0 0;">
+                                                Lietotājvārds: <?php echo htmlspecialchars($child['lietotajvards'] ?? '—'); ?>
+                                            </p>
+
+                                            <p class="muted small" style="margin:.2rem 0 0 0;">
+                                                E-pasts: <?php echo htmlspecialchars($child['epasts'] ?? '—'); ?>
+                                            </p>
+
+                                            <p class="muted small" style="margin:.2rem 0 0 0;">
+                                                Loma: <?php echo htmlspecialchars($child['loma'] ?? '—'); ?>
+                                                &nbsp;•&nbsp;
+                                                Statuss: <?php echo htmlspecialchars($child['statuss'] ?? '—'); ?>
+                                            </p>
+
+                                            <p class="muted small" style="margin:.2rem 0 0 0;">
+                                                Reģistrēts: 
+                                                <?php
+                                                    echo !empty($child['Reg_datums'])
+                                                        ? htmlspecialchars(date('d.m.Y H:i', strtotime($child['Reg_datums'])))
+                                                        : '—';
+                                                ?>
                                             </p>
                                         </div>
                                     </div>
+
                                     <div style="display:flex; gap:.5rem; align-items:center;">
-                                        <a class="btn btn-outline btn-sm" href="#">Skatīt</a>
-                                        <a class="btn btn-sm" href="#">Rediģēt</a>
+                                        <a class="btn btn-outline btn-sm" href="../children/view.php?id=<?php echo (int)$child['lietotajs_id']; ?>">Skatīt</a>
+                                        <a class="btn btn-sm" href="../children/edit.php?id=<?php echo (int)$child['lietotajs_id']; ?>">Rediģēt</a>
                                     </div>
                                 </div>
                             </div>

@@ -1,10 +1,6 @@
 <?php
 session_start();
 
-$lapa  = "Lietotāja panelis";
-$title = "Lietotāja panelis - Ceļa meklētāji";
-
-require __DIR__ . "/../includes/templates/header.php";
 require_once __DIR__ . "/../includes/config/database.php";
 
 // Check if user is logged in
@@ -12,6 +8,31 @@ if (!isset($_SESSION["lietotajs_id"])) {
     header("Location: ../auth/login.php");
     exit();
 }
+
+// Ja lietotājam jau ir konkrēta loma, met uz īsto paneli
+$loma = $_SESSION["loma"] ?? "";
+
+if ($loma === "admin") {
+    header("Location: admin.php");
+    exit();
+} elseif ($loma === "Vecāks" || $loma === "parent") {
+    header("Location: parent.php");
+    exit();
+} elseif ($loma === "Direktors") {
+    header("Location: director.php");
+    exit();
+} elseif ($loma === "Skolotājs") {
+    header("Location: teacher.php");
+    exit();
+} elseif ($loma === "Ceļameklētājs") {
+    header("Location: student.php");
+    exit();
+}
+
+$lapa  = "Lietotāja panelis";
+$title = "Lietotāja panelis - Ceļa meklētāji";
+
+require __DIR__ . "/../includes/templates/header.php";
 ?>
 
 <main class="dashboard-main">
