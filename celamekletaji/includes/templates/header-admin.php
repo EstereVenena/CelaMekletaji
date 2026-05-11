@@ -5,7 +5,6 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/../config/app.php';
 
-// Piekļuve tikai adminam
 if (!isset($_SESSION["lietotajs_id"]) || ($_SESSION["loma"] ?? '') !== 'admin') {
     header("Location: " . BASE_URL . "auth/login.php");
     exit();
@@ -14,7 +13,6 @@ if (!isset($_SESSION["lietotajs_id"]) || ($_SESSION["loma"] ?? '') !== 'admin') 
 $username = trim($_SESSION["lietotajvards"] ?? 'Administrators');
 $userRole = trim($_SESSION["loma"] ?? 'admin');
 
-// Iniciāļi
 $initials = 'A';
 if ($username !== '') {
     $parts = preg_split('/\s+/', $username);
@@ -26,7 +24,6 @@ if ($username !== '') {
     }
 }
 
-// Aktīvā sadaļa
 $currentPath = $_SERVER['PHP_SELF'] ?? '';
 
 function adminNavActive(string $needle, string $currentPath): string
@@ -34,7 +31,6 @@ function adminNavActive(string $needle, string $currentPath): string
     return strpos($currentPath, $needle) !== false ? 'is-active' : '';
 }
 
-// URL
 $dashboardUrl = BASE_URL . 'dashboards/admin.php';
 $newsUrl      = BASE_URL . 'admin/news/news.php';
 $clubsUrl     = BASE_URL . 'admin/clubs/clubs.php';
@@ -58,46 +54,66 @@ $logoutUrl    = BASE_URL . 'auth/logout.php';
             position: sticky;
             top: 0;
             z-index: 1000;
-            background: #ffffffee;
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid #e5e7eb;
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(14px);
+            border-bottom: 1px solid rgba(30,79,161,0.12);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.04);
         }
 
-        .admin-container {
+        .admin-nav-container {
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 0.75rem 1rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: .8rem 1rem;
             gap: 1rem;
         }
 
         .admin-logo {
             display: flex;
             align-items: center;
-            gap: .6rem;
+            gap: .7rem;
             text-decoration: none;
             color: #173f84;
-            font-weight: bold;
+            font-weight: 800;
+            white-space: nowrap;
         }
 
         .admin-logo img {
-            width: 40px;
-            height: 40px;
+            width: 42px;
+            height: 42px;
             object-fit: contain;
+        }
+
+        .admin-logo span {
+            font-size: 1.05rem;
+        }
+
+        .admin-title {
+            font-weight: 800;
+            color: #1e4fa1;
+            background: #eef3ff;
+            padding: .45rem .85rem;
+            border-radius: 999px;
+            font-size: .95rem;
+            white-space: nowrap;
         }
 
         .admin-nav {
             display: flex;
-            gap: .5rem;
+            align-items: center;
+            gap: .35rem;
         }
 
         .admin-nav a {
             text-decoration: none;
-            padding: .6rem .9rem;
+            color: #263238;
+            padding: .6rem .85rem;
             border-radius: 999px;
-            font-weight: 600;
-            color: #333;
-            transition: .2s;
+            font-weight: 700;
+            transition: .2s ease;
+            font-size: .95rem;
         }
 
         .admin-nav a:hover {
@@ -108,94 +124,195 @@ $logoutUrl    = BASE_URL . 'auth/logout.php';
         .admin-nav a.is-active {
             background: #173f84;
             color: #fff;
+            box-shadow: 0 6px 18px rgba(23,63,132,.22);
         }
 
         .admin-right {
             display: flex;
             align-items: center;
-            gap: .6rem;
+            gap: .65rem;
             position: relative;
         }
 
         .admin-home {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
             text-decoration: none;
-            background: #eef3ff;
-            padding: .5rem .8rem;
+            background: #f4c430;
+            color: #1d1d1d;
+            padding: .55rem .85rem;
             border-radius: 999px;
-            color: #173f84;
-            font-weight: 600;
+            font-weight: 800;
+            transition: .2s ease;
+            white-space: nowrap;
+        }
+
+        .admin-home:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(244,196,48,.28);
+        }
+
+        .admin-user-menu {
+            position: relative;
+        }
+
+        .admin-avatar-btn {
+            border: none;
+            background: transparent;
+            padding: 0;
+            cursor: pointer;
         }
 
         .admin-avatar {
-            width: 40px;
-            height: 40px;
+            width: 42px;
+            height: 42px;
             border-radius: 50%;
-            background: #173f84;
+            background: linear-gradient(135deg, #173f84, #1e4fa1);
             color: #fff;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: bold;
-            cursor: pointer;
-            border: none;
+            font-weight: 900;
+            box-shadow: 0 8px 20px rgba(23,63,132,.25);
         }
 
         .admin-dropdown {
             position: absolute;
             top: 55px;
             right: 0;
-            width: 220px;
+            width: 245px;
             background: #fff;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0,0,0,.1);
+            border-radius: 16px;
+            box-shadow: 0 18px 45px rgba(0,0,0,.13);
+            border: 1px solid #eef0f4;
             display: none;
-            padding: .5rem;
+            overflow: hidden;
         }
 
-        .admin-dropdown a {
+        .admin-user-menu.open .admin-dropdown {
             display: block;
-            padding: .6rem;
+        }
+
+        .admin-dropdown-head {
+            padding: .9rem 1rem;
+            background: #f7f9fc;
+            border-bottom: 1px solid #edf0f5;
+        }
+
+        .admin-dropdown-name {
+            font-weight: 900;
+            color: #173f84;
+        }
+
+        .admin-dropdown-role {
+            font-size: .85rem;
+            color: #6b7280;
+            margin-top: .15rem;
+        }
+
+        .admin-dropdown-link {
+            display: flex;
+            align-items: center;
+            gap: .65rem;
+            padding: .75rem 1rem;
+            color: #263238;
             text-decoration: none;
-            color: #333;
-            border-radius: 6px;
+            font-weight: 700;
+            transition: .2s;
         }
 
-        .admin-dropdown a:hover {
-            background: #f3f4f6;
+        .admin-dropdown-link:hover {
+            background: #eef3ff;
+            color: #173f84;
         }
 
-        .admin-dropdown.show {
-            display: block;
+        .admin-dropdown-link--danger {
+            color: #c0392b;
+        }
+
+        .admin-dropdown-link--danger:hover {
+            background: #fff1f1;
+            color: #a5281d;
         }
 
         .admin-menu-btn {
             display: none;
             border: none;
-            background: transparent;
+            background: #eef3ff;
+            color: #173f84;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
             cursor: pointer;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
+        }
+
+        .admin-nav-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.45);
+            z-index: 900;
+            display: none;
+        }
+
+        .admin-nav-backdrop.show {
+            display: block;
+        }
+
+        body.nav-lock {
+            overflow: hidden;
         }
 
         @media (max-width: 900px) {
-            .admin-nav {
-                position: fixed;
-                right: -100%;
-                top: 0;
-                height: 100vh;
-                width: 250px;
-                background: white;
-                flex-direction: column;
-                padding: 2rem;
-                transition: .3s;
-                box-shadow: -10px 0 30px rgba(0,0,0,.1);
+            .admin-title {
+                display: none;
             }
 
-            .admin-nav.open {
+            .admin-nav {
+                position: fixed;
+                top: 0;
+                right: -100%;
+                width: 280px;
+                height: 100vh;
+                background: #fff;
+                z-index: 1001;
+                flex-direction: column;
+                align-items: stretch;
+                padding: 5rem 1.3rem 1.3rem;
+                transition: .3s ease;
+                box-shadow: -12px 0 35px rgba(0,0,0,.16);
+            }
+
+            .admin-nav.is-open {
                 right: 0;
             }
 
+            .admin-nav a {
+                border-radius: 12px;
+                padding: .9rem 1rem;
+            }
+
             .admin-menu-btn {
-                display: block;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                position: relative;
+                z-index: 1002;
+            }
+
+            .admin-home span {
+                display: none;
+            }
+        }
+
+        @media (max-width: 520px) {
+            .admin-logo span {
+                display: none;
+            }
+
+            .admin-nav-container {
+                padding: .65rem .8rem;
             }
         }
     </style>
@@ -203,35 +320,70 @@ $logoutUrl    = BASE_URL . 'auth/logout.php';
 <body>
 
 <header class="admin-header">
-    <div class="admin-container">
+    <div class="admin-nav-container">
 
-        <a href="<?= $dashboardUrl ?>" class="admin-logo">
-            <img src="<?= BASE_URL ?>assets/images/logos/logo.png" alt="Logo">
-            <span>Admin</span>
+        <a href="<?= $dashboardUrl ?>" class="admin-logo" aria-label="Uz admin paneli">
+            <img src="<?= BASE_URL ?>assets/images/logos/logo.png" alt="Ceļa meklētāji logo">
+            <span>Ceļa meklētāji</span>
         </a>
 
-        <nav class="admin-nav" id="adminNav">
-            <a href="<?= $dashboardUrl ?>" class="<?= adminNavActive('/dashboards/', $currentPath) ?>">Dashboard</a>
-            <a href="<?= $newsUrl ?>" class="<?= adminNavActive('/admin/news/', $currentPath) ?>">Jaunumi</a>
-            <a href="<?= $clubsUrl ?>" class="<?= adminNavActive('/admin/clubs/', $currentPath) ?>">Klubi</a>
-            <a href="<?= $galleryUrl ?>" class="<?= adminNavActive('/admin/gallery/', $currentPath) ?>">Galerija</a>
-            <a href="<?= $usersUrl ?>" class="<?= adminNavActive('/admin/users/', $currentPath) ?>">Lietotāji</a>
+        <?php if (!empty($lapa)): ?>
+            <div class="admin-title"><?= htmlspecialchars($lapa) ?></div>
+        <?php endif; ?>
+
+        <nav class="admin-nav" id="adminNav" aria-label="Admin navigācija">
+            <a href="<?= $dashboardUrl ?>" class="<?= adminNavActive('/dashboards/admin.php', $currentPath) ?>">
+                <i class="fas fa-gauge"></i> Dashboard
+            </a>
+            <a href="<?= $newsUrl ?>" class="<?= adminNavActive('/admin/news/', $currentPath) ?>">
+                <i class="fas fa-newspaper"></i> Jaunumi
+            </a>
+            <a href="<?= $clubsUrl ?>" class="<?= adminNavActive('/admin/clubs/', $currentPath) ?>">
+                <i class="fas fa-people-group"></i> Klubi
+            </a>
+            <a href="<?= $galleryUrl ?>" class="<?= adminNavActive('/admin/gallery/', $currentPath) ?>">
+                <i class="fas fa-images"></i> Galerija
+            </a>
+            <a href="<?= $usersUrl ?>" class="<?= adminNavActive('/admin/users/', $currentPath) ?>">
+                <i class="fas fa-users"></i> Lietotāji
+            </a>
         </nav>
 
         <div class="admin-right">
-            <a href="<?= $homeUrl ?>" class="admin-home">Sākums</a>
+            <a href="<?= $homeUrl ?>" class="admin-home">
+                <i class="fas fa-house"></i>
+                <span>Sākums</span>
+            </a>
 
-            <button class="admin-avatar" id="avatarBtn" type="button">
-                <?= htmlspecialchars($initials) ?>
-            </button>
+            <div class="admin-user-menu" id="adminUserMenu">
+                <button class="admin-avatar-btn" id="adminAvatarBtn" type="button" aria-haspopup="true" aria-expanded="false">
+                    <span class="admin-avatar"><?= htmlspecialchars($initials) ?></span>
+                </button>
 
-            <div class="admin-dropdown" id="dropdown">
-                <a href="<?= $dashboardUrl ?>">Panelis</a>
-                <a href="<?= $usersUrl ?>">Lietotāji</a>
-                <a href="<?= $logoutUrl ?>">Iziet</a>
+                <div class="admin-dropdown" id="adminDropdown">
+                    <div class="admin-dropdown-head">
+                        <div class="admin-dropdown-name"><?= htmlspecialchars($username) ?></div>
+                        <div class="admin-dropdown-role"><?= htmlspecialchars($userRole) ?></div>
+                    </div>
+
+                    <a href="<?= $dashboardUrl ?>" class="admin-dropdown-link">
+                        <i class="fas fa-gauge"></i>
+                        <span>Admin panelis</span>
+                    </a>
+
+                    <a href="<?= $usersUrl ?>" class="admin-dropdown-link">
+                        <i class="fas fa-users"></i>
+                        <span>Lietotāji</span>
+                    </a>
+
+                    <a href="<?= $logoutUrl ?>" class="admin-dropdown-link admin-dropdown-link--danger">
+                        <i class="fas fa-right-from-bracket"></i>
+                        <span>Iziet</span>
+                    </a>
+                </div>
             </div>
 
-            <button class="admin-menu-btn" id="menuBtn" type="button">
+            <button id="adminMenuBtn" class="admin-menu-btn" type="button" aria-label="Atvērt izvēlni" aria-expanded="false">
                 <i class="fas fa-bars"></i>
             </button>
         </div>
@@ -239,30 +391,73 @@ $logoutUrl    = BASE_URL . 'auth/logout.php';
     </div>
 </header>
 
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const avatar = document.getElementById('avatarBtn');
-    const dropdown = document.getElementById('dropdown');
-    const btn = document.getElementById('menuBtn');
-    const nav = document.getElementById('adminNav');
+<div class="admin-nav-backdrop" id="adminNavBackdrop"></div>
 
-    if (avatar && dropdown) {
-        avatar.addEventListener('click', function (e) {
+<script>
+(function () {
+    const menuBtn = document.getElementById('adminMenuBtn');
+    const nav = document.getElementById('adminNav');
+    const backdrop = document.getElementById('adminNavBackdrop');
+
+    function openMenu() {
+        nav.classList.add('is-open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        menuBtn.innerHTML = '<i class="fas fa-xmark"></i>';
+        backdrop.classList.add('show');
+        document.body.classList.add('nav-lock');
+    }
+
+    function closeMenu() {
+        nav.classList.remove('is-open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        menuBtn.innerHTML = '<i class="fas fa-bars"></i>';
+        backdrop.classList.remove('show');
+        document.body.classList.remove('nav-lock');
+    }
+
+    if (menuBtn && nav && backdrop) {
+        menuBtn.addEventListener('click', function () {
+            nav.classList.contains('is-open') ? closeMenu() : openMenu();
+        });
+
+        backdrop.addEventListener('click', closeMenu);
+
+        nav.querySelectorAll('a').forEach(function (link) {
+            link.addEventListener('click', function () {
+                if (window.matchMedia('(max-width: 900px)').matches) {
+                    closeMenu();
+                }
+            });
+        });
+    }
+
+    const avatarBtn = document.getElementById('adminAvatarBtn');
+    const userMenu = document.getElementById('adminUserMenu');
+
+    if (avatarBtn && userMenu) {
+        avatarBtn.addEventListener('click', function (e) {
             e.stopPropagation();
-            dropdown.classList.toggle('show');
+            const isOpen = userMenu.classList.toggle('open');
+            avatarBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
         });
 
         document.addEventListener('click', function (e) {
-            if (!avatar.contains(e.target) && !dropdown.contains(e.target)) {
-                dropdown.classList.remove('show');
+            if (!userMenu.contains(e.target)) {
+                userMenu.classList.remove('open');
+                avatarBtn.setAttribute('aria-expanded', 'false');
             }
         });
     }
 
-    if (btn && nav) {
-        btn.addEventListener('click', function () {
-            nav.classList.toggle('open');
-        });
-    }
-});
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            if (nav && nav.classList.contains('is-open')) closeMenu();
+
+            if (userMenu) {
+                userMenu.classList.remove('open');
+                avatarBtn.setAttribute('aria-expanded', 'false');
+            }
+        }
+    });
+})();
 </script>
