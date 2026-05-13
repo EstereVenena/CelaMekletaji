@@ -6,17 +6,49 @@ $title = "Vecāku panelis - Ceļa meklētāji";
 
 require_once __DIR__ . "/../includes/config/database.php";
 
-// Pārbauda, vai lietotājs ir ielogojies un ir Vecāks
-if (!isset($_SESSION["lietotajs_id"]) || ($_SESSION["loma"] ?? "") !== "Vecāks") {
+if (!isset($_SESSION["lietotajs_id"]) || !in_array(($_SESSION["loma"] ?? ""), ["Vecāks", "parent"], true)) {
     header("Location: ../auth/login.php");
     exit();
 }
 
 $parentId = (int) ($_SESSION["lietotajs_id"] ?? 0);
 $children = [];
+$activities = [];
 $error = null;
 
-// Ielādē bērnus, kas piesaistīti konkrētajam vecākam
+function formatEventDateRange(?string $startDate, ?string $endDate): string
+{
+    if (empty($startDate)) {
+        return "—";
+    }
+
+    $start = date("d.m.Y", strtotime($startDate));
+
+    if (!empty($endDate) && $endDate !== $startDate) {
+        $end = date("d.m.Y", strtotime($endDate));
+        return $start . " - " . $end;
+    }
+
+    return $start;
+}
+
+function formatEventTimeRange(?string $startTime, ?string $endTime): string
+{
+    if (empty($startTime)) {
+        return "";
+    }
+
+    $start = substr($startTime, 0, 5);
+
+    if (!empty($endTime) && $endTime !== $startTime) {
+        $end = substr($endTime, 0, 5);
+        return "plkst. " . $start . " - " . $end;
+    }
+
+    return "plkst. " . $start;
+}
+
+// Bērni
 $sql = "
     SELECT 
         c.lietotajs_id,
@@ -37,20 +69,65 @@ $sql = "
 
 if ($stmt = $savienojums->prepare($sql)) {
     $stmt->bind_param("i", $parentId);
+    $stmt->execute();
+    $result = $stmt->get_result();
 
-    if ($stmt->execute()) {
-        $result = $stmt->get_result();
-
-        while ($row = $result->fetch_assoc()) {
-            $children[] = $row;
-        }
-    } else {
-        $error = "Neizdevās ielādēt bērnu sarakstu.";
+    while ($row = $result->fetch_assoc()) {
+        $children[] = $row;
     }
 
     $stmt->close();
 } else {
-    $error = "Neizdevās sagatavot SQL vaicājumu.";
+    $error = "Neizdevās ielādēt bērnu sarakstu.";
+}
+
+// Nākamās aktivitātes
+$activitySql = "
+    SELECT
+        e.id,
+        e.title,
+        e.description,
+        e.start_date,
+        e.end_date,
+        e.start_time,
+        e.end_time,
+        e.location,
+        e.event_type,
+        c.vards AS child_vards,
+        c.uzvards AS child_uzvards,
+        ea.status
+    FROM cm_parent_children pc
+    INNER JOIN cm_lietotaji c
+        ON c.lietotajs_id = pc.child_id
+    INNER JOIN cm_event_applications ea
+        ON ea.child_id = c.lietotajs_id
+    INNER JOIN cm_events e
+        ON e.id = ea.event_id
+    WHERE pc.parent_id = ?
+      AND c.statuss <> 'dzēsts'
+      AND e.is_active = 1
+      AND (
+            e.start_date >= CURDATE()
+            OR (
+                e.end_date IS NOT NULL
+                AND e.end_date >= CURDATE()
+            )
+      )
+      AND ea.status IN ('pieteikts', 'apstiprināts')
+    ORDER BY e.start_date ASC, e.start_time ASC
+    LIMIT 5
+";
+
+if ($stmt = $savienojums->prepare($activitySql)) {
+    $stmt->bind_param("i", $parentId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    while ($row = $result->fetch_assoc()) {
+        $activities[] = $row;
+    }
+
+    $stmt->close();
 }
 
 require __DIR__ . "/../includes/templates/header-parent.php";
@@ -61,7 +138,7 @@ require __DIR__ . "/../includes/templates/header-parent.php";
         <div class="dashboard-header">
             <?php $username = htmlspecialchars($_SESSION['lietotajvards'] ?? 'Vecāks'); ?>
             <h2>Sveiki, <?php echo $username; ?>!</h2>
-            <p class="lead">Šis ir jūsu vecāku panelis — pārvaldiet bērnu dalību, maksājumus un paziņojumus.</p>
+            <p class="lead">Šis ir jūsu vecāku panelis — pārvaldiet bērnu dalību, aktivitātes un paziņojumus.</p>
         </div>
 
         <div class="section-title-row" style="margin-bottom:1rem;">
@@ -69,8 +146,10 @@ require __DIR__ . "/../includes/templates/header-parent.php";
                 <h3 class="small">Konts</h3>
                 <p class="muted small">Loma: <strong>Vecāks</strong></p>
             </div>
-            <div style="display:flex; gap:.6rem; align-items:center;">
+
+            <div style="display:flex; gap:.6rem; align-items:center; flex-wrap:wrap;">
                 <a class="btn btn-primary btn-sm" href="../children/add.php">Pievienot bērnu</a>
+                <a class="btn btn-outline btn-sm" href="../children/manage.php">Pārvaldīt bērnus</a>
             </div>
         </div>
 
@@ -81,61 +160,47 @@ require __DIR__ . "/../includes/templates/header-parent.php";
         <?php endif; ?>
 
         <div class="dashboard-content">
+
             <div class="dashboard-card">
                 <h3>Mani bērni (<?php echo count($children); ?>)</h3>
-                <p class="muted">Pārvaldīt jūsu bērnu informāciju un redzēt viņu dalību klubos.</p>
+                <p class="muted">Pārvaldīt jūsu bērnu informāciju un redzēt viņu dalību aktivitātēs.</p>
+
+                <div class="divider"></div>
 
                 <?php if (empty($children)): ?>
-                    <div class="divider"></div>
                     <p class="muted">
                         Pagaidām nav pievienotu bērnu.
                         <a class="link" href="../children/add.php">Pievienot bērnu</a>
                     </p>
                 <?php else: ?>
-                    <div class="divider"></div>
-                    <div class="cards">
+                    <div class="parent-child-list">
                         <?php foreach ($children as $child): ?>
-                            <div class="card">
-                                <div class="program-head">
-                                    <div style="display:flex; gap:.75rem; align-items:center;">
-                                        <div class="program-logo">
-                                            <img src="../assets/images/avatar-placeholder.png" alt="avatar">
-                                        </div>
+                            <div class="parent-child-card">
+                                <div class="parent-child-info">
+                                    <div class="parent-child-text">
+                                        <h4>
+                                            <?php echo htmlspecialchars(trim(($child['vards'] ?? '') . ' ' . ($child['uzvards'] ?? ''))); ?>
+                                        </h4>
 
-                                        <div>
-                                            <h4 style="margin:0;">
-                                                <?php echo htmlspecialchars(($child['vards'] ?? '') . ' ' . ($child['uzvards'] ?? '')); ?>
-                                            </h4>
+                                        <p class="muted small">
+                                            Lietotājvārds: <?php echo htmlspecialchars($child['lietotajvards'] ?? '—'); ?>
+                                        </p>
 
-                                            <p class="muted small" style="margin:.2rem 0 0 0;">
-                                                Lietotājvārds: <?php echo htmlspecialchars($child['lietotajvards'] ?? '—'); ?>
-                                            </p>
+                                        <p class="muted small">
+                                            E-pasts: <?php echo htmlspecialchars($child['epasts'] ?? '—'); ?>
+                                        </p>
 
-                                            <p class="muted small" style="margin:.2rem 0 0 0;">
-                                                E-pasts: <?php echo htmlspecialchars($child['epasts'] ?? '—'); ?>
-                                            </p>
-
-                                            <p class="muted small" style="margin:.2rem 0 0 0;">
-                                                Loma: <?php echo htmlspecialchars($child['loma'] ?? '—'); ?>
-                                                &nbsp;•&nbsp;
-                                                Statuss: <?php echo htmlspecialchars($child['statuss'] ?? '—'); ?>
-                                            </p>
-
-                                            <p class="muted small" style="margin:.2rem 0 0 0;">
-                                                Reģistrēts: 
-                                                <?php
-                                                    echo !empty($child['Reg_datums'])
-                                                        ? htmlspecialchars(date('d.m.Y H:i', strtotime($child['Reg_datums'])))
-                                                        : '—';
-                                                ?>
-                                            </p>
-                                        </div>
+                                        <p class="muted small">
+                                            Loma: <?php echo htmlspecialchars($child['loma'] ?? '—'); ?>
+                                            &nbsp;•&nbsp;
+                                            Statuss: <?php echo htmlspecialchars($child['statuss'] ?? '—'); ?>
+                                        </p>
                                     </div>
+                                </div>
 
-                                    <div style="display:flex; gap:.5rem; align-items:center;">
-                                        <a class="btn btn-outline btn-sm" href="../children/view.php?id=<?php echo (int)$child['lietotajs_id']; ?>">Skatīt</a>
-                                        <a class="btn btn-sm" href="../children/edit.php?id=<?php echo (int)$child['lietotajs_id']; ?>">Rediģēt</a>
-                                    </div>
+                                <div class="parent-child-actions">
+                                    <a class="btn btn-outline btn-sm" href="../children/view.php?id=<?php echo (int)$child['lietotajs_id']; ?>">Skatīt</a>
+                                    <a class="btn btn-sm" href="../children/edit.php?id=<?php echo (int)$child['lietotajs_id']; ?>">Rediģēt</a>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -144,13 +209,62 @@ require __DIR__ . "/../includes/templates/header-parent.php";
             </div>
 
             <div class="dashboard-card">
-                <h3>Bērnu aktivitātes</h3>
-                <p class="muted">Ātrs pārskats par klubu apmeklējumu, nākamajiem pasākumiem un paziņojumiem.</p>
+                <div class="section-title-row">
+                    <div>
+                        <h3>Bērnu aktivitātes</h3>
+                        <p class="muted">Tuvākās aktivitātes, kurās bērni ir pieteikti.</p>
+                    </div>
+
+                    <a class="btn btn-outline btn-sm" href="../parent/activities.php">Skatīt kalendāru</a>
+                </div>
+
                 <div class="divider"></div>
-                <ul class="footer-list" style="margin-top:.5rem;">
-                    <li><i class="badge badge-blue">Aktuāli</i> Nav gaidāmu pasākumu</li>
-                    <li><i class="badge badge-gold">Klubs</i> Nav reģistrēta dalība</li>
-                </ul>
+
+                <?php if (empty($activities)): ?>
+                    <ul class="footer-list" style="margin-top:.5rem;">
+                        <li><i class="badge badge-blue">Aktuāli</i> Nav gaidāmu aktivitāšu</li>
+                        <li><i class="badge badge-gold">Klubs</i> Nav reģistrēta dalība</li>
+                    </ul>
+                <?php else: ?>
+                    <div class="parent-activity-list">
+                        <?php foreach ($activities as $activity): ?>
+                            <div class="parent-activity-item">
+                                <div>
+                                    <strong><?php echo htmlspecialchars($activity["title"] ?? "Aktivitāte"); ?></strong>
+
+                                    <p class="muted small">
+                                        Bērns:
+                                        <?php echo htmlspecialchars(trim(($activity["child_vards"] ?? "") . " " . ($activity["child_uzvards"] ?? ""))); ?>
+                                    </p>
+
+                                    <p class="muted small">
+                                        Datums:
+                                        <?php echo htmlspecialchars(formatEventDateRange($activity["start_date"], $activity["end_date"])); ?>
+
+                                        <?php
+                                        $timeText = formatEventTimeRange($activity["start_time"], $activity["end_time"]);
+                                        if ($timeText !== ""):
+                                        ?>
+                                            <?php echo htmlspecialchars($timeText); ?>
+                                        <?php endif; ?>
+
+                                        <?php if (!empty($activity["location"])): ?>
+                                            • <?php echo htmlspecialchars($activity["location"]); ?>
+                                        <?php endif; ?>
+                                    </p>
+
+                                    <p class="muted small">
+                                        Veids: <?php echo htmlspecialchars($activity["event_type"] ?? "pasākums"); ?>
+                                    </p>
+                                </div>
+
+                                <span class="badge badge-blue">
+                                    <?php echo htmlspecialchars($activity["status"] ?? "pieteikts"); ?>
+                                </span>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
             </div>
 
             <div class="dashboard-card">
@@ -159,8 +273,74 @@ require __DIR__ . "/../includes/templates/header-parent.php";
                 <div class="divider"></div>
                 <p class="muted">Nav neapmaksātu rēķinu.</p>
             </div>
+
         </div>
     </div>
 </main>
+
+<style>
+.parent-child-list {
+    display: grid;
+    gap: .75rem;
+}
+
+.parent-child-card,
+.parent-activity-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: .75rem;
+    padding: .85rem;
+    border: 1px solid #eef1f6;
+    border-radius: 16px;
+    background: #fff;
+}
+
+.parent-child-info,
+.parent-child-text {
+    min-width: 0;
+    width: 100%;
+}
+
+.parent-child-text h4 {
+    margin: 0 0 .25rem;
+    font-size: 1rem;
+    line-height: 1.2;
+    word-break: normal;
+    overflow-wrap: anywhere;
+}
+
+.parent-child-text p,
+.parent-activity-item p {
+    margin: .25rem 0 0;
+    line-height: 1.35;
+    word-break: normal;
+    overflow-wrap: anywhere;
+}
+
+.parent-child-actions {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+}
+
+.parent-activity-list {
+    display: grid;
+    gap: .75rem;
+}
+
+@media (max-width: 700px) {
+    .parent-child-card,
+    .parent-activity-item {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .parent-child-actions {
+        justify-content: flex-start;
+    }
+}
+</style>
 
 <?php require __DIR__ . "/../includes/templates/footer.php"; ?>

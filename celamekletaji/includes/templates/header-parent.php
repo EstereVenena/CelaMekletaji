@@ -43,10 +43,10 @@ function parentNavActive(array $pages, string $currentPage): string
 // Saistes
 $dashboardUrl     = BASE_URL . 'dashboards/parent.php';
 $childrenUrl      = BASE_URL . 'children/manage.php';
-$activitiesUrl    = BASE_URL . 'dashboards/parent-activities.php';
-$paymentsUrl      = BASE_URL . 'dashboards/parent-payments.php';
-$notificationsUrl = BASE_URL . 'dashboards/parent-notifications.php';
-$profileUrl       = BASE_URL . 'dashboards/parent-profile.php';
+$activitiesUrl    = BASE_URL . 'parent/activities.php';
+$paymentsUrl      = BASE_URL . 'parent/payments.php';
+$notificationsUrl = BASE_URL . 'parent/notifications.php';
+$profileUrl       = BASE_URL . 'parent/profile.php';
 $logoutUrl        = BASE_URL . 'auth/logout.php';
 $homeUrl          = BASE_URL . 'index.php';
 ?>
@@ -343,17 +343,17 @@ $homeUrl          = BASE_URL . 'index.php';
                 Mani bērni
             </a>
 
-            <a href="<?= $activitiesUrl ?>" class="<?= parentNavActive(['parent-activities.php'], $currentPage) ?>">
+            <a href="<?= $activitiesUrl ?>" class="<?= parentNavActive(['activities.php'], $currentPage) ?>">
                 <i class="fas fa-calendar-check"></i>
                 Aktivitātes
             </a>
 
-            <a href="<?= $paymentsUrl ?>" class="<?= parentNavActive(['parent-payments.php'], $currentPage) ?>">
+            <a href="<?= $paymentsUrl ?>" class="<?= parentNavActive(['payments.php'], $currentPage) ?>">
                 <i class="fas fa-credit-card"></i>
                 Maksājumi
             </a>
 
-            <a href="<?= $notificationsUrl ?>" class="<?= parentNavActive(['parent-notifications.php'], $currentPage) ?>">
+            <a href="<?= $notificationsUrl ?>" class="<?= parentNavActive(['notifications.php'], $currentPage) ?>">
                 <i class="fas fa-bell"></i>
                 Paziņojumi
             </a>
@@ -401,9 +401,19 @@ $homeUrl          = BASE_URL . 'index.php';
                         <span>Mani bērni</span>
                     </a>
 
+                    <a href="<?= $activitiesUrl ?>" class="parent-dropdown-link">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>Aktivitātes</span>
+                    </a>
+
                     <a href="<?= $paymentsUrl ?>" class="parent-dropdown-link">
                         <i class="fas fa-wallet"></i>
                         <span>Maksājumi</span>
+                    </a>
+
+                    <a href="<?= $notificationsUrl ?>" class="parent-dropdown-link">
+                        <i class="fas fa-bell"></i>
+                        <span>Paziņojumi</span>
                     </a>
 
                     <a href="<?= $logoutUrl ?>" class="parent-dropdown-link parent-dropdown-link--danger">
@@ -473,3 +483,6 @@ $homeUrl          = BASE_URL . 'index.php';
 
 })();
 </script>
+
+</body>
+</html>
