@@ -5,457 +5,278 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/../config/app.php';
 
-// Drošība: tikai skolēnam
-if (!isset($_SESSION["lietotajs_id"]) || !in_array(($_SESSION["loma"] ?? ''), ['Skolēns', 'student'], true)) {
+$isLoggedIn = isset($_SESSION["lietotajs_id"]);
+
+$username = trim($_SESSION["lietotajvards"] ?? '');
+$userRole = trim($_SESSION["loma"] ?? '');
+
+$lomasAtlautas = ["Skolēns", "Ceļameklētājs", "Bērns", "student", "child"];
+
+if (!$isLoggedIn || !in_array($userRole, $lomasAtlautas, true)) {
     header("Location: " . BASE_URL . "auth/login.php");
     exit();
 }
 
-$username = trim($_SESSION["lietotajvards"] ?? 'Skolēns');
-$userRole = trim($_SESSION["loma"] ?? 'Skolēns');
+/* ===============================
+   AVATAR INICIĀĻI
+================================ */
+$initials = 'C';
 
-// Iniciāļi avataram
-$initials = 'S';
 if ($username !== '') {
     $parts = preg_split('/\s+/', $username);
+
     if (!empty($parts[0])) {
         $initials = mb_strtoupper(mb_substr($parts[0], 0, 1));
+
         if (isset($parts[1]) && $parts[1] !== '') {
             $initials .= mb_strtoupper(mb_substr($parts[1], 0, 1));
         }
     }
 }
 
-// Aktīvā lapa
-$currentPage = basename($_SERVER['PHP_SELF'] ?? 'student.php');
-
-function studentNavActive(array $pages, string $currentPage): string
-{
-    return in_array($currentPage, $pages, true) ? 'is-active' : '';
-}
-
-// Saistes
-$dashboardUrl      = BASE_URL . 'dashboards/student.php';
-$lessonsUrl        = BASE_URL . 'dashboards/student-lessons.php';
-$applicationsUrl   = BASE_URL . 'dashboards/student-applications.php';
-$notificationsUrl  = BASE_URL . 'dashboards/student-notifications.php';
-$profileUrl        = BASE_URL . 'dashboards/student-profile.php';
-$logoutUrl         = BASE_URL . 'auth/logout.php';
-$homeUrl           = BASE_URL . 'index.php';
+/* ===============================
+   PROFILA SAITE
+================================ */
+$profileUrl = BASE_URL . "profile.php";
 ?>
 <!DOCTYPE html>
 <html lang="lv">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($title ?? 'Skolēna panelis - Ceļa meklētāji') ?></title>
+    <title>
+        <?php echo htmlspecialchars($title ?? 'Ceļameklētāja panelis'); ?>
+    </title>
 
     <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
-    <style>
-        .student-header {
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            background: rgba(255,255,255,.95);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(23, 63, 132, 0.10);
-            box-shadow: 0 10px 30px rgba(16, 24, 40, 0.06);
-        }
-
-        .student-nav-container {
-            min-height: 78px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-        }
-
-        .student-brand {
-            display: flex;
-            align-items: center;
-            gap: .85rem;
-            text-decoration: none;
-            color: #173f84;
-            min-width: 0;
-        }
-
-        .student-brand img {
-            width: 44px;
-            height: 44px;
-            object-fit: contain;
-            flex-shrink: 0;
-        }
-
-        .student-brand-text {
-            display: flex;
-            flex-direction: column;
-            line-height: 1.1;
-        }
-
-        .student-brand-text strong {
-            font-size: 1rem;
-            color: #173f84;
-        }
-
-        .student-brand-text span {
-            font-size: .84rem;
-            color: #5b6475;
-        }
-
-        .student-nav {
-            display: flex;
-            align-items: center;
-            gap: .35rem;
-            flex-wrap: wrap;
-        }
-
-        .student-nav a {
-            text-decoration: none;
-            color: #24324a;
-            font-weight: 600;
-            padding: .7rem .95rem;
-            border-radius: 999px;
-            transition: all .2s ease;
-        }
-
-        .student-nav a:hover {
-            background: #eef3ff;
-            color: #173f84;
-        }
-
-        .student-nav a.is-active {
-            background: linear-gradient(135deg, #1e4fa1, #173f84);
-            color: #fff;
-            box-shadow: 0 8px 18px rgba(23, 63, 132, 0.22);
-        }
-
-        .student-right {
-            display: flex;
-            align-items: center;
-            gap: .75rem;
-            position: relative;
-        }
-
-        .student-quick-home {
-            display: inline-flex;
-            align-items: center;
-            gap: .45rem;
-            text-decoration: none;
-            color: #173f84;
-            background: #edf3ff;
-            padding: .65rem .9rem;
-            border-radius: 999px;
-            font-weight: 700;
-            transition: .2s ease;
-        }
-
-        .student-quick-home:hover {
-            background: #dfe9ff;
-        }
-
-        .student-avatar-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: .55rem;
-            border: none;
-            background: transparent;
-            cursor: pointer;
-            padding: 0;
-        }
-
-        .student-avatar {
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #f4c430, #e1aa16);
-            color: #173f84;
-            font-weight: 800;
-            box-shadow: 0 8px 18px rgba(244, 196, 48, 0.28);
-        }
-
-        .student-dropdown {
-            position: absolute;
-            top: calc(100% + 10px);
-            right: 0;
-            width: 280px;
-            background: #fff;
-            border: 1px solid rgba(23, 63, 132, 0.10);
-            border-radius: 18px;
-            box-shadow: 0 20px 50px rgba(15, 23, 42, 0.14);
-            padding: .75rem;
-            display: none;
-        }
-
-        .student-user-menu.open .student-dropdown {
-            display: block;
-        }
-
-        .student-dropdown-head {
-            padding: .75rem;
-            border-bottom: 1px solid #eef1f6;
-            margin-bottom: .45rem;
-        }
-
-        .student-dropdown-name {
-            font-weight: 800;
-            color: #173f84;
-            margin-bottom: .2rem;
-        }
-
-        .student-dropdown-role {
-            font-size: .9rem;
-            color: #697386;
-        }
-
-        .student-dropdown-link {
-            display: flex;
-            align-items: center;
-            gap: .7rem;
-            text-decoration: none;
-            color: #24324a;
-            padding: .8rem .75rem;
-            border-radius: 12px;
-            transition: .2s ease;
-        }
-
-        .student-dropdown-link:hover {
-            background: #f6f8fc;
-        }
-
-        .student-dropdown-link--danger {
-            color: #b42318;
-        }
-
-        .student-menu-btn {
-            display: none;
-            border: none;
-            background: #173f84;
-            color: #fff;
-            width: 42px;
-            height: 42px;
-            border-radius: 12px;
-            cursor: pointer;
-        }
-
-        .student-mobile-backdrop {
-            position: fixed;
-            inset: 0;
-            background: rgba(15, 23, 42, 0.4);
-            z-index: 998;
-            opacity: 0;
-            pointer-events: none;
-            transition: .2s ease;
-        }
-
-        .student-mobile-backdrop.show {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        @media (max-width: 980px) {
-            .student-menu-btn {
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-            }
-
-            .student-nav {
-                position: fixed;
-                top: 0;
-                right: 0;
-                height: 100vh;
-                width: min(86vw, 340px);
-                background: #ffffff;
-                box-shadow: -20px 0 50px rgba(0,0,0,.12);
-                padding: 6rem 1rem 1.25rem;
-                flex-direction: column;
-                align-items: stretch;
-                gap: .45rem;
-                transform: translateX(100%);
-                transition: transform .25s ease;
-                z-index: 999;
-                flex-wrap: nowrap;
-            }
-
-            .student-nav.is-open {
-                transform: translateX(0);
-            }
-
-            .student-nav a {
-                border-radius: 14px;
-                padding: .95rem 1rem;
-            }
-
-            .student-quick-home {
-                display: none;
-            }
-
-            body.nav-lock {
-                overflow: hidden;
-            }
-        }
-
-        @media (max-width: 640px) {
-            .student-brand-text span {
-                display: none;
-            }
-        }
-    </style>
 </head>
+
 <body>
 
-<header class="student-header">
-    <div class="container student-nav-container">
-        <a href="<?= $dashboardUrl ?>" class="student-brand" aria-label="Uz skolēna paneli">
+<header class="main-header">
+    <div class="container nav-container">
+
+        <!-- LOGO -->
+        <a href="<?= BASE_URL ?>auth/logout.php" class="logo" aria-label="Uz sākumu">
             <img src="<?= BASE_URL ?>assets/images/logos/logo.png" alt="Ceļa meklētāji logo">
-            <div class="student-brand-text">
-                <strong>Ceļa meklētāji</strong>
-                <span><?= htmlspecialchars($lapa ?? 'Skolēna panelis') ?></span>
-            </div>
+            <span>Ceļa meklētāji</span>
         </a>
 
-        <nav class="student-nav" id="studentNav" aria-label="Skolēna navigācija">
-            <a href="<?= $dashboardUrl ?>" class="<?= studentNavActive(['student.php'], $currentPage) ?>">
-                <i class="fas fa-house"></i> Pārskats
+        <!-- PAGE TITLE -->
+        <?php if (!empty($lapa)): ?>
+            <div class="header-title">
+                <?php echo htmlspecialchars($lapa); ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- NAV -->
+        <nav class="main-nav" id="mainNav" aria-label="Ceļameklētāja navigācija">
+
+            <a href="<?= BASE_URL ?>auth/logout.php">
+                <i class="fas fa-house"></i>
+                <span>Sākums</span>
             </a>
-            <a href="<?= $lessonsUrl ?>" class="<?= studentNavActive(['student-lessons.php'], $currentPage) ?>">
-                <i class="fas fa-book-open"></i> Nodarbības
+
+            <a href="<?= BASE_URL ?>dashboards/student.php">
+                <i class="fas fa-gauge-high"></i>
+                <span>Panelis</span>
             </a>
-            <a href="<?= $applicationsUrl ?>" class="<?= studentNavActive(['student-applications.php'], $currentPage) ?>">
-                <i class="fas fa-file-signature"></i> Mani pieteikumi
+
+            <!-- MANS KLUBS DROPDOWN -->
+            <div class="director-club-dropdown" id="studentClubDropdown">
+
+                <button
+                    class="nav-link director-club-toggle"
+                    id="studentClubToggle"
+                    type="button"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                >
+                    <i class="fas fa-campground"></i>
+                    <span>Mans klubs</span>
+                    <i class="fas fa-chevron-down dropdown-arrow"></i>
+                </button>
+
+                <div class="director-club-menu" id="studentClubMenu">
+
+                    <a href="<?= BASE_URL ?>lessons/index.php">
+                        <i class="fas fa-book-open"></i>
+                        <span>Nodarbības</span>
+                    </a>
+
+                    <a href="<?= BASE_URL ?>applications/index.php">
+                        <i class="fas fa-clipboard-list"></i>
+                        <span>Mani pieteikumi</span>
+                    </a>
+
+                    <a href="<?= BASE_URL ?>events/index.php">
+                        <i class="fas fa-calendar-days"></i>
+                        <span>Pasākumi</span>
+                    </a>
+
+                </div>
+            </div>
+
+            <a href="<?= BASE_URL ?>public/news.php">
+                <i class="fas fa-newspaper"></i>
+                <span>Jaunumi</span>
             </a>
-            <a href="<?= $notificationsUrl ?>" class="<?= studentNavActive(['student-notifications.php'], $currentPage) ?>">
-                <i class="fas fa-bell"></i> Paziņojumi
-            </a>
+
         </nav>
 
-        <div class="student-right">
-            <a href="<?= $homeUrl ?>" class="student-quick-home">
-                <i class="fas fa-arrow-left"></i>
-                <span>Uz sākumlapu</span>
-            </a>
+        <!-- RIGHT SIDE -->
+        <div class="nav-right">
 
-            <div class="student-user-menu" id="studentUserMenu">
+            <!-- USER MENU -->
+            <div class="user-menu" id="userMenu">
+
                 <button
-                    class="student-avatar-btn"
-                    id="studentAvatarBtn"
+                    class="user-avatar-btn"
+                    id="userAvatarBtn"
                     type="button"
                     aria-haspopup="true"
                     aria-expanded="false"
                     aria-label="Lietotāja izvēlne"
                 >
-                    <span class="student-avatar"><?= htmlspecialchars($initials) ?></span>
+                    <span class="user-avatar">
+                        <?php echo htmlspecialchars($initials); ?>
+                    </span>
                 </button>
 
-                <div class="student-dropdown" id="studentDropdown">
-                    <div class="student-dropdown-head">
-                        <div class="student-dropdown-name"><?= htmlspecialchars($username) ?></div>
-                        <div class="student-dropdown-role"><?= htmlspecialchars($userRole) ?></div>
+                <div class="user-dropdown" id="userDropdown">
+
+                    <div class="user-dropdown-head">
+                        <div class="user-dropdown-name">
+                            <?php echo htmlspecialchars($username ?: 'Ceļameklētājs'); ?>
+                        </div>
+
+                        <div class="user-dropdown-role">
+                            <?php echo htmlspecialchars($userRole ?: 'Ceļameklētājs'); ?>
+                        </div>
                     </div>
 
-                    <a href="<?= $profileUrl ?>" class="student-dropdown-link">
+                    <a href="<?= $profileUrl ?>" class="user-dropdown-link">
                         <i class="fas fa-user-gear"></i>
                         <span>Mans profils</span>
                     </a>
 
-                    <a href="<?= $lessonsUrl ?>" class="student-dropdown-link">
-                        <i class="fas fa-book-open"></i>
-                        <span>Nodarbības</span>
-                    </a>
-
-                    <a href="<?= $applicationsUrl ?>" class="student-dropdown-link">
-                        <i class="fas fa-file-signature"></i>
+                    <a href="<?= BASE_URL ?>applications/index.php" class="user-dropdown-link">
+                        <i class="fas fa-clipboard-check"></i>
                         <span>Mani pieteikumi</span>
                     </a>
 
-                    <a href="<?= $logoutUrl ?>" class="student-dropdown-link student-dropdown-link--danger">
+                    <a href="<?= BASE_URL ?>lessons/index.php" class="user-dropdown-link">
+                        <i class="fas fa-book-open-reader"></i>
+                        <span>Nodarbības</span>
+                    </a>
+
+                    <a href="<?= BASE_URL ?>auth/logout.php" class="user-dropdown-link user-dropdown-link--danger">
                         <i class="fas fa-right-from-bracket"></i>
                         <span>Iziet</span>
                     </a>
+
                 </div>
             </div>
 
+            <!-- MOBILE MENU BUTTON -->
             <button
-                id="studentMenuBtn"
-                class="student-menu-btn"
+                id="menu-btn"
+                class="menu-btn"
                 type="button"
                 aria-label="Atvērt izvēlni"
-                aria-controls="studentNav"
+                aria-controls="mainNav"
                 aria-expanded="false"
             >
-                <i class="fas fa-bars"></i>
+                <i class="fas fa-bars" aria-hidden="true"></i>
             </button>
+
         </div>
     </div>
 </header>
 
-<div class="student-mobile-backdrop" id="studentNavBackdrop"></div>
+<div class="nav-backdrop" id="navBackdrop" hidden></div>
 
 <script>
 (function () {
-    const menuBtn = document.getElementById('studentMenuBtn');
-    const nav = document.getElementById('studentNav');
-    const backdrop = document.getElementById('studentNavBackdrop');
+    /* ===============================
+       MOBILE MENU
+    ================================ */
+    const btn = document.getElementById('menu-btn');
+    const nav = document.getElementById('mainNav');
+    const backdrop = document.getElementById('navBackdrop');
 
     function openMenu() {
+        if (!btn || !nav) return;
+
         nav.classList.add('is-open');
-        backdrop.classList.add('show');
+        btn.setAttribute('aria-expanded', 'true');
+        btn.setAttribute('aria-label', 'Aizvērt izvēlni');
+        btn.innerHTML = '<i class="fas fa-xmark" aria-hidden="true"></i>';
+
+        if (backdrop) {
+            backdrop.hidden = false;
+            backdrop.classList.add('show');
+        }
+
         document.body.classList.add('nav-lock');
-        menuBtn.setAttribute('aria-expanded', 'true');
-        menuBtn.innerHTML = '<i class="fas fa-xmark"></i>';
     }
 
     function closeMenu() {
+        if (!btn || !nav) return;
+
         nav.classList.remove('is-open');
-        backdrop.classList.remove('show');
+        btn.setAttribute('aria-expanded', 'false');
+        btn.setAttribute('aria-label', 'Atvērt izvēlni');
+        btn.innerHTML = '<i class="fas fa-bars" aria-hidden="true"></i>';
+
+        if (backdrop) {
+            backdrop.classList.remove('show');
+            backdrop.hidden = true;
+        }
+
         document.body.classList.remove('nav-lock');
-        menuBtn.setAttribute('aria-expanded', 'false');
-        menuBtn.innerHTML = '<i class="fas fa-bars"></i>';
     }
 
-    if (menuBtn && nav) {
-        menuBtn.addEventListener('click', function () {
-            const isOpen = nav.classList.contains('is-open');
-            isOpen ? closeMenu() : openMenu();
+    if (btn && nav) {
+        btn.addEventListener('click', function () {
+            const expanded = btn.getAttribute('aria-expanded') === 'true';
+            expanded ? closeMenu() : openMenu();
         });
 
-        backdrop.addEventListener('click', closeMenu);
+        if (backdrop) {
+            backdrop.addEventListener('click', closeMenu);
+        }
 
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') {
-                closeMenu();
-            }
-        });
-
-        nav.querySelectorAll('a').forEach(function (link) {
-            link.addEventListener('click', function () {
-                if (window.matchMedia('(max-width: 980px)').matches) {
+        nav.querySelectorAll('a').forEach(function (a) {
+            a.addEventListener('click', function () {
+                if (window.matchMedia('(max-width: 768px)').matches) {
                     closeMenu();
                 }
             });
         });
 
         window.addEventListener('resize', function () {
-            if (!window.matchMedia('(max-width: 980px)').matches) {
+            if (!window.matchMedia('(max-width: 768px)').matches) {
                 closeMenu();
             }
         });
     }
 
-    const avatarBtn = document.getElementById('studentAvatarBtn');
-    const userMenu = document.getElementById('studentUserMenu');
+    /* ===============================
+       USER DROPDOWN
+    ================================ */
+    const avatarBtn = document.getElementById('userAvatarBtn');
+    const userMenu = document.getElementById('userMenu');
 
     if (avatarBtn && userMenu) {
         avatarBtn.addEventListener('click', function (e) {
             e.stopPropagation();
+
             const isOpen = userMenu.classList.toggle('open');
             avatarBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+
+            closeStudentClubDropdown();
         });
 
         document.addEventListener('click', function (e) {
@@ -464,13 +285,57 @@ $homeUrl           = BASE_URL . 'index.php';
                 avatarBtn.setAttribute('aria-expanded', 'false');
             }
         });
+    }
 
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') {
+    /* ===============================
+       STUDENT CLUB DROPDOWN
+    ================================ */
+    const clubDropdown = document.getElementById('studentClubDropdown');
+    const clubToggle = document.getElementById('studentClubToggle');
+    const clubMenu = document.getElementById('studentClubMenu');
+
+    function closeStudentClubDropdown() {
+        if (!clubToggle || !clubMenu) return;
+
+        clubToggle.classList.remove('is-open');
+        clubMenu.classList.remove('is-open');
+        clubToggle.setAttribute('aria-expanded', 'false');
+    }
+
+    if (clubToggle && clubMenu && clubDropdown) {
+        clubToggle.addEventListener('click', function (e) {
+            e.stopPropagation();
+
+            const isOpen = clubMenu.classList.toggle('is-open');
+            clubToggle.classList.toggle('is-open', isOpen);
+            clubToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+
+            if (userMenu && avatarBtn) {
                 userMenu.classList.remove('open');
                 avatarBtn.setAttribute('aria-expanded', 'false');
             }
         });
+
+        document.addEventListener('click', function (e) {
+            if (!clubDropdown.contains(e.target)) {
+                closeStudentClubDropdown();
+            }
+        });
     }
+
+    /* ===============================
+       ESC CLOSE
+    ================================ */
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            closeMenu();
+            closeStudentClubDropdown();
+
+            if (userMenu && avatarBtn) {
+                userMenu.classList.remove('open');
+                avatarBtn.setAttribute('aria-expanded', 'false');
+            }
+        }
+    });
 })();
 </script>
