@@ -9,7 +9,6 @@ $kluda = "";
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $login = trim($_POST["lietotajvards"] ?? "");
     $parole = $_POST["parole"] ?? "";
-
     $sql = "
         SELECT 
             u.lietotajs_id,
@@ -64,27 +63,45 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $_SESSION["lietotajs_id"] = $lietotajs["lietotajs_id"];
             $_SESSION["lietotajvards"] = $lietotajs["lietotajvards"];
             $_SESSION["loma"] = $lietotajs["loma"];
+            $_SESSION["club_id"] = $user["club_id"];
 
             $redirect = "../dashboards/user.php";
 
-            switch ($lietotajs["loma"]) {
-                case "admin":
-                    $redirect = "../dashboards/admin.php";
-                    break;
-                case "Direktors":
-                    $redirect = "../dashboards/director.php";
-                    break;
-                case "Skolotājs":
-                    $redirect = "../dashboards/teacher.php";
-                    break;
-                case "Vecāks":
-                case "parent":
-                    $redirect = "../dashboards/parent.php";
-                    break;
-                case "Ceļameklētājs":
-                    $redirect = "../dashboards/student.php";
-                    break;
-            }
+            $loma = trim($lietotajs["loma"]);
+
+switch ($loma) {
+    case "admin":
+    case "Administrators":
+        $redirect = "../dashboards/admin.php";
+        break;
+
+    case "Direktors":
+    case "direktors":
+        $redirect = "../dashboards/director.php";
+        break;
+
+    case "Skolotājs":
+    case "teacher":
+        $redirect = "../dashboards/teacher.php";
+        break;
+
+    case "Vecāks":
+    case "parent":
+        $redirect = "../dashboards/parent.php";
+        break;
+
+    case "Ceļameklētājs":
+    case "Skolēns":
+    case "Bērns":
+    case "student":
+    case "child":
+        $redirect = "../dashboards/student.php";
+        break;
+
+    default:
+        $redirect = "../dashboards/user.php";
+        break;
+}
 
             header("Location: " . $redirect);
             exit();

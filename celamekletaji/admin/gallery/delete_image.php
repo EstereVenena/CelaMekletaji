@@ -1,5 +1,6 @@
 <?php
-require_once "../assets/database.php";
+
+require_once __DIR__ . "/../../includes/config/database.php";
 
 if(isset($_GET['id'])){
 

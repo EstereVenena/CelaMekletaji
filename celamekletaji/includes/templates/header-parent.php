@@ -348,11 +348,6 @@ $homeUrl          = BASE_URL . 'index.php';
                 Aktivitātes
             </a>
 
-            <a href="<?= $paymentsUrl ?>" class="<?= parentNavActive(['payments.php'], $currentPage) ?>">
-                <i class="fas fa-credit-card"></i>
-                Maksājumi
-            </a>
-
             <a href="<?= $notificationsUrl ?>" class="<?= parentNavActive(['notifications.php'], $currentPage) ?>">
                 <i class="fas fa-bell"></i>
                 Paziņojumi
@@ -405,12 +400,6 @@ $homeUrl          = BASE_URL . 'index.php';
                         <i class="fas fa-calendar-check"></i>
                         <span>Aktivitātes</span>
                     </a>
-
-                    <a href="<?= $paymentsUrl ?>" class="parent-dropdown-link">
-                        <i class="fas fa-wallet"></i>
-                        <span>Maksājumi</span>
-                    </a>
-
                     <a href="<?= $notificationsUrl ?>" class="parent-dropdown-link">
                         <i class="fas fa-bell"></i>
                         <span>Paziņojumi</span>
