@@ -266,14 +266,6 @@ require __DIR__ . "/../includes/templates/header-parent.php";
                     </div>
                 <?php endif; ?>
             </div>
-
-            <div class="dashboard-card">
-                <h3>Maksājumi</h3>
-                <p class="muted">Skatīt rēķinus un veikt maksājumus par klubu dalību.</p>
-                <div class="divider"></div>
-                <p class="muted">Nav neapmaksātu rēķinu.</p>
-            </div>
-
         </div>
     </div>
 </main>

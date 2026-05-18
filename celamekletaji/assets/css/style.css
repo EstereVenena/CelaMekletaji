@@ -1846,3 +1846,93 @@ p{
         font-size:.95rem;
     }
 }
+
+/* =========================
+   DIRECTOR USERS DROPDOWN
+   ========================= */
+
+.director-users-dropdown {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.director-users-toggle {
+    border: none;
+    cursor: pointer;
+}
+
+.director-users-toggle .dropdown-arrow {
+    font-size: .75rem;
+    margin-left: .25rem;
+}
+
+.director-users-toggle.is-open .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+.director-users-menu {
+    position: absolute;
+    top: calc(100% + .65rem);
+    right: 0;
+    min-width: 220px;
+    background: var(--surface);
+    border: var(--border);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow);
+    padding: .45rem;
+    display: none;
+    z-index: 1200;
+}
+
+.director-users-menu.is-open {
+    display: block;
+}
+
+.director-users-menu a {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    padding: .8rem .9rem;
+    border-radius: 12px;
+    color: var(--text);
+    font-weight: 900;
+    text-decoration: none;
+}
+
+.director-users-menu a:hover {
+    background: rgba(30,79,161,.08);
+    color: var(--blue-800);
+}
+
+.director-users-menu a i {
+    color: var(--blue-800);
+    min-width: 18px;
+    text-align: center;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    .director-users-dropdown {
+        width: 100%;
+        display: block;
+    }
+
+    .director-users-toggle {
+        width: 100%;
+    }
+
+    .director-users-menu {
+        position: static;
+        width: 100%;
+        min-width: 100%;
+        margin-top: .35rem;
+        box-shadow: none;
+        border-radius: 14px;
+        background: rgba(30,79,161,.04);
+    }
+
+    .director-users-menu a {
+        padding: .75rem 1rem;
+    }
+}
