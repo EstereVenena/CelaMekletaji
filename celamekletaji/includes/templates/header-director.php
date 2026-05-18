@@ -29,15 +29,28 @@ function directorIsActive(string $needle, string $currentUrl): string
 }
 
 $dashboardUrl = BASE_URL . 'dashboards/director.php';
-$clubUrl      = BASE_URL . 'director/club.php';
-$childrenUrl  = BASE_URL . 'director/users.php?role=children';
-$parentsUrl   = BASE_URL . 'director/users.php?role=parents';
-$teachersUrl  = BASE_URL . 'director/users.php?role=teachers';
-$allUsersUrl   = BASE_URL . 'director/users.php';
-$addUserUrl   = BASE_URL . 'director/add_user.php';
-$profileUrl   = BASE_URL . 'profile.php';
-$homeUrl      = BASE_URL . 'index.php';
-$logoutUrl    = BASE_URL . 'auth/logout.php';
+
+$clubUrl             = BASE_URL . 'director/club.php';
+$clubActivitiesUrl   = BASE_URL . 'director/activities.php';
+$clubApplicationsUrl = BASE_URL . 'director/applications.php';
+$clubLessonsUrl      = BASE_URL . 'director/lesson_plans.php';
+
+$childrenUrl = BASE_URL . 'director/users.php?role=children';
+$parentsUrl  = BASE_URL . 'director/users.php?role=parents';
+$teachersUrl = BASE_URL . 'director/users.php?role=teachers';
+$allUsersUrl = BASE_URL . 'director/users.php';
+
+$addUserUrl = BASE_URL . 'director/add_user.php';
+$profileUrl = BASE_URL . 'profile.php';
+$homeUrl = BASE_URL . 'auth/logout.php?redirect=home';
+$logoutUrl  = BASE_URL . 'auth/logout.php';
+
+$clubDropdownActive = (
+    str_contains($currentUrl, '/director/club.php') ||
+    str_contains($currentUrl, '/director/activities.php') ||
+    str_contains($currentUrl, '/director/applications.php') ||
+    str_contains($currentUrl, '/director/lesson_plans.php')
+);
 
 $usersDropdownActive = (
     str_contains($currentUrl, 'role=children') ||
@@ -45,6 +58,12 @@ $usersDropdownActive = (
     str_contains($currentUrl, 'role=teachers') ||
     str_contains($currentUrl, '/director/users.php')
 );
+
+$avatarLetter = 'D';
+
+if ($username !== '') {
+    $avatarLetter = mb_strtoupper(mb_substr($username, 0, 1));
+}
 ?>
 <!DOCTYPE html>
 <html lang="lv">
@@ -77,18 +96,51 @@ $usersDropdownActive = (
         </h1>
 
         <nav class="main-nav director-main-nav" id="directorMainNav">
+
             <a class="nav-link <?= directorIsActive('/dashboards/director.php', $currentUrl) ?>"
                href="<?= $dashboardUrl ?>">
                 <i class="fas fa-gauge"></i>
                 <span>Panelis</span>
             </a>
 
-            <a class="nav-link <?= directorIsActive('/director/club.php', $currentUrl) ?>"
-               href="<?= $clubUrl ?>">
-                <i class="fas fa-people-roof"></i>
-                <span>Mans klubs</span>
-            </a>
+            <!-- MANS KLUBS DROPDOWN -->
+            <div class="director-club-dropdown">
+                <button
+                    class="nav-link director-club-toggle <?= $clubDropdownActive ? 'is-active' : '' ?>"
+                    type="button"
+                    id="directorClubToggle"
+                    aria-expanded="false"
+                    aria-haspopup="true"
+                >
+                    <i class="fas fa-people-roof"></i>
+                    <span>Mans klubs</span>
+                    <i class="fas fa-chevron-down dropdown-arrow"></i>
+                </button>
 
+                <div class="director-club-menu" id="directorClubMenu">
+                    <a href="<?= $clubUrl ?>">
+                        <i class="fas fa-circle-info"></i>
+                        <span>Kluba informācija</span>
+                    </a>
+
+                    <a href="<?= $clubActivitiesUrl ?>">
+                        <i class="fas fa-calendar-days"></i>
+                        <span>Aktivitātes</span>
+                    </a>
+
+                    <a href="<?= $clubApplicationsUrl ?>">
+                        <i class="fas fa-file-signature"></i>
+                        <span>Pieteikumi</span>
+                    </a>
+
+                    <a href="<?= $clubLessonsUrl ?>">
+                        <i class="fas fa-clipboard-list"></i>
+                        <span>Nodarbību plāni</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- LIETOTĀJI DROPDOWN -->
             <div class="director-users-dropdown">
                 <button
                     class="nav-link director-users-toggle <?= $usersDropdownActive ? 'is-active' : '' ?>"
@@ -125,20 +177,49 @@ $usersDropdownActive = (
                 </div>
             </div>
 
-            <a class="nav-link director-profile-link" href="<?= $profileUrl ?>">
-                <i class="fas fa-user"></i>
-                <span><?= htmlspecialchars($username) ?></span>
+            <a class="nav-link nav-cta <?= directorIsActive('/director/add_user.php', $currentUrl) ?>"
+               href="<?= $addUserUrl ?>">
+                <i class="fas fa-user-plus"></i>
+                <span class="nav-cta-text">Pievienot</span>
             </a>
 
-            <a class="nav-link director-home-link" href="<?= $homeUrl ?>">
-                <i class="fas fa-house"></i>
-                <span>Sākums</span>
-            </a>
+            <!-- PROFILA IKONA DROPDOWN -->
+            <div class="director-account-dropdown">
+                <button
+                    class="director-account-toggle"
+                    type="button"
+                    id="directorAccountToggle"
+                    aria-expanded="false"
+                    aria-haspopup="true"
+                    title="<?= htmlspecialchars($username) ?>"
+                >
+                    <span class="director-account-avatar">
+                        <?= htmlspecialchars($avatarLetter) ?>
+                    </span>
+                </button>
 
-            <a class="nav-link director-logout-link" href="<?= $logoutUrl ?>">
-                <i class="fas fa-right-from-bracket"></i>
-                <span>Iziet</span>
-            </a>
+                <div class="director-account-menu" id="directorAccountMenu">
+                    <div class="director-account-head">
+                        <strong><?= htmlspecialchars($username) ?></strong>
+                        <small><?= htmlspecialchars($userRole) ?></small>
+                    </div>
+
+                    <a href="<?= $profileUrl ?>">
+                        <i class="fas fa-user-pen"></i>
+                        <span>Labot profilu</span>
+                    </a>
+
+                    <a href="<?= $homeUrl ?>">
+                        <i class="fas fa-house"></i>
+                        <span>Uz sākuma lapu</span>
+                    </a>
+
+                    <a class="danger" href="<?= $logoutUrl ?>">
+                        <i class="fas fa-right-from-bracket"></i>
+                        <span>Iziet</span>
+                    </a>
+                </div>
+            </div>
         </nav>
 
         <button class="menu-btn" id="directorMenuBtn" type="button" aria-label="Atvērt izvēlni" aria-expanded="false">
@@ -156,8 +237,14 @@ $usersDropdownActive = (
     const nav = document.getElementById('directorMainNav');
     const backdrop = document.getElementById('directorNavBackdrop');
 
+    const clubToggle = document.getElementById('directorClubToggle');
+    const clubMenu = document.getElementById('directorClubMenu');
+
     const usersToggle = document.getElementById('directorUsersToggle');
     const usersMenu = document.getElementById('directorUsersMenu');
+
+    const accountToggle = document.getElementById('directorAccountToggle');
+    const accountMenu = document.getElementById('directorAccountMenu');
 
     function openMobileMenu() {
         if (!menuBtn || !nav || !backdrop) return;
@@ -191,6 +278,14 @@ $usersDropdownActive = (
         }, 220);
     }
 
+    function closeClubDropdown() {
+        if (!clubToggle || !clubMenu) return;
+
+        clubMenu.classList.remove('is-open');
+        clubToggle.classList.remove('is-open');
+        clubToggle.setAttribute('aria-expanded', 'false');
+    }
+
     function closeUsersDropdown() {
         if (!usersToggle || !usersMenu) return;
 
@@ -199,16 +294,60 @@ $usersDropdownActive = (
         usersToggle.setAttribute('aria-expanded', 'false');
     }
 
+    function closeAccountDropdown() {
+        if (!accountToggle || !accountMenu) return;
+
+        accountMenu.classList.remove('is-open');
+        accountToggle.classList.remove('is-open');
+        accountToggle.setAttribute('aria-expanded', 'false');
+    }
+
+    function closeAllDropdowns() {
+        closeClubDropdown();
+        closeUsersDropdown();
+        closeAccountDropdown();
+    }
+
+    function toggleClubDropdown(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (!clubToggle || !clubMenu) return;
+
+        closeUsersDropdown();
+        closeAccountDropdown();
+
+        const isOpen = clubMenu.classList.toggle('is-open');
+        clubToggle.classList.toggle('is-open', isOpen);
+        clubToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    }
+
     function toggleUsersDropdown(event) {
         event.preventDefault();
         event.stopPropagation();
 
         if (!usersToggle || !usersMenu) return;
 
-        const isOpen = usersMenu.classList.toggle('is-open');
+        closeClubDropdown();
+        closeAccountDropdown();
 
+        const isOpen = usersMenu.classList.toggle('is-open');
         usersToggle.classList.toggle('is-open', isOpen);
         usersToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    }
+
+    function toggleAccountDropdown(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (!accountToggle || !accountMenu) return;
+
+        closeClubDropdown();
+        closeUsersDropdown();
+
+        const isOpen = accountMenu.classList.toggle('is-open');
+        accountToggle.classList.toggle('is-open', isOpen);
+        accountToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
     }
 
     if (menuBtn && nav && backdrop) {
@@ -222,7 +361,7 @@ $usersDropdownActive = (
 
         backdrop.addEventListener('click', function () {
             closeMobileMenu();
-            closeUsersDropdown();
+            closeAllDropdowns();
         });
 
         nav.querySelectorAll('a').forEach(function (link) {
@@ -231,8 +370,16 @@ $usersDropdownActive = (
                     closeMobileMenu();
                 }
 
-                closeUsersDropdown();
+                closeAllDropdowns();
             });
+        });
+    }
+
+    if (clubToggle && clubMenu) {
+        clubToggle.addEventListener('click', toggleClubDropdown);
+
+        clubMenu.addEventListener('click', function (event) {
+            event.stopPropagation();
         });
     }
 
@@ -244,14 +391,22 @@ $usersDropdownActive = (
         });
     }
 
+    if (accountToggle && accountMenu) {
+        accountToggle.addEventListener('click', toggleAccountDropdown);
+
+        accountMenu.addEventListener('click', function (event) {
+            event.stopPropagation();
+        });
+    }
+
     document.addEventListener('click', function () {
-        closeUsersDropdown();
+        closeAllDropdowns();
     });
 
     document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') {
             closeMobileMenu();
-            closeUsersDropdown();
+            closeAllDropdowns();
         }
     });
 })();

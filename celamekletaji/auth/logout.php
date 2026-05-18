@@ -4,6 +4,11 @@ session_start();
 require_once __DIR__ . "/../includes/config/app.php";
 require_once __DIR__ . "/../includes/config/database.php";
 
+$redirectType = $_GET["redirect"] ?? "";
+
+/* ===============================
+   DZĒŠ REMEMBER TOKEN NO DB
+================================ */
 if (isset($_SESSION["lietotajs_id"])) {
     $stmt = $savienojums->prepare("
         UPDATE cm_lietotaji
@@ -18,6 +23,9 @@ if (isset($_SESSION["lietotajs_id"])) {
     }
 }
 
+/* ===============================
+   DZĒŠ REMEMBER COOKIE
+================================ */
 setcookie("remember_token", "", [
     "expires" => time() - 3600,
     "path" => "/",
@@ -26,8 +34,19 @@ setcookie("remember_token", "", [
     "samesite" => "Lax"
 ]);
 
+/* ===============================
+   DZĒŠ PHP SESIJU
+================================ */
 $_SESSION = [];
 session_unset();
 session_destroy();
 
+/* ===============================
+   NOVIRZĪŠANA
+================================ */
+if ($redirectType === "home") {
+    redirect("index.php");
+}
+
+/* Noklusētais variants */
 redirect("public/about.php");
