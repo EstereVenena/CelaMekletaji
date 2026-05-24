@@ -18,6 +18,18 @@ if (!$isLoggedIn || !in_array($userRole, $lomasAtlautas, true)) {
 }
 
 /* ===============================
+   STUDENT MAPES LINKI
+================================ */
+$studentBase = BASE_URL . "student/";
+
+$studentPanelUrl        = BASE_URL . "dashboards/student.php";
+$studentLessonsUrl      = $studentBase . "lessons.php";
+$studentApplicationsUrl = $studentBase . "applications.php";
+$studentEventsUrl       = $studentBase . "events.php";
+$studentProfileUrl      = $studentBase . "profile.php";
+$studentNewsUrl         = $studentBase . "news.php";
+
+/* ===============================
    AVATAR INICIĀĻI
 ================================ */
 $initials = 'C';
@@ -33,11 +45,6 @@ if ($username !== '') {
         }
     }
 }
-
-/* ===============================
-   PROFILA SAITE
-================================ */
-$profileUrl = BASE_URL . "profile.php";
 ?>
 <!DOCTYPE html>
 <html lang="lv">
@@ -58,7 +65,7 @@ $profileUrl = BASE_URL . "profile.php";
     <div class="container nav-container">
 
         <!-- LOGO -->
-        <a href="<?= BASE_URL ?>auth/logout.php" class="logo" aria-label="Uz sākumu">
+        <a href="<?= $studentPanelUrl ?>" class="logo" aria-label="Ceļameklētāja panelis">
             <img src="<?= BASE_URL ?>assets/images/logos/logo.png" alt="Ceļa meklētāji logo">
             <span>Ceļa meklētāji</span>
         </a>
@@ -73,12 +80,7 @@ $profileUrl = BASE_URL . "profile.php";
         <!-- NAV -->
         <nav class="main-nav" id="mainNav" aria-label="Ceļameklētāja navigācija">
 
-            <a href="<?= BASE_URL ?>auth/logout.php">
-                <i class="fas fa-house"></i>
-                <span>Sākums</span>
-            </a>
-
-            <a href="<?= BASE_URL ?>dashboards/student.php">
+            <a href="<?= $studentPanelUrl ?>">
                 <i class="fas fa-gauge-high"></i>
                 <span>Panelis</span>
             </a>
@@ -100,17 +102,17 @@ $profileUrl = BASE_URL . "profile.php";
 
                 <div class="director-club-menu" id="studentClubMenu">
 
-                    <a href="<?= BASE_URL ?>lessons/index.php">
+                    <a href="<?= $studentLessonsUrl ?>">
                         <i class="fas fa-book-open"></i>
                         <span>Nodarbības</span>
                     </a>
 
-                    <a href="<?= BASE_URL ?>applications/index.php">
+                    <a href="<?= $studentApplicationsUrl ?>">
                         <i class="fas fa-clipboard-list"></i>
                         <span>Mani pieteikumi</span>
                     </a>
 
-                    <a href="<?= BASE_URL ?>events/index.php">
+                    <a href="<?= $studentEventsUrl ?>">
                         <i class="fas fa-calendar-days"></i>
                         <span>Pasākumi</span>
                     </a>
@@ -118,7 +120,7 @@ $profileUrl = BASE_URL . "profile.php";
                 </div>
             </div>
 
-            <a href="<?= BASE_URL ?>public/news.php">
+            <a href="<?= $studentNewsUrl ?>">
                 <i class="fas fa-newspaper"></i>
                 <span>Jaunumi</span>
             </a>
@@ -156,17 +158,17 @@ $profileUrl = BASE_URL . "profile.php";
                         </div>
                     </div>
 
-                    <a href="<?= $profileUrl ?>" class="user-dropdown-link">
+                    <a href="<?= $studentProfileUrl ?>" class="user-dropdown-link">
                         <i class="fas fa-user-gear"></i>
                         <span>Mans profils</span>
                     </a>
 
-                    <a href="<?= BASE_URL ?>applications/index.php" class="user-dropdown-link">
+                    <a href="<?= $studentApplicationsUrl ?>" class="user-dropdown-link">
                         <i class="fas fa-clipboard-check"></i>
                         <span>Mani pieteikumi</span>
                     </a>
 
-                    <a href="<?= BASE_URL ?>lessons/index.php" class="user-dropdown-link">
+                    <a href="<?= $studentLessonsUrl ?>" class="user-dropdown-link">
                         <i class="fas fa-book-open-reader"></i>
                         <span>Nodarbības</span>
                     </a>

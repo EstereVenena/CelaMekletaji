@@ -7,14 +7,18 @@ require_once __DIR__ . "/../includes/functions/functions.php";
 $kluda = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    // Saņem lietotāja ievadītos pieslēgšanās datus
     $login = trim($_POST["lietotajvards"] ?? "");
     $parole = $_POST["parole"] ?? "";
+
+    // Atlasa lietotāju pēc lietotājvārda vai e-pasta un iegūst arī viņa lomu
     $sql = "
         SELECT 
             u.lietotajs_id,
             u.lietotajvards,
             u.epasts,
             u.parole,
+            u.club_id,
             COALESCE(l.nosaukums, u.loma) AS loma,
             u.statuss,
             u.login_meginajumi,
@@ -36,19 +40,25 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $rez = $stmt->get_result();
 
     if ($rez && $rez->num_rows === 1) {
+
         $lietotajs = $rez->fetch_assoc();
 
+        // Pārbauda, vai konts nav īslaicīgi bloķēts vai neaktīvs
         if (!empty($lietotajs["blokets_lidz"]) && strtotime($lietotajs["blokets_lidz"]) > time()) {
+
             $kluda = "Konts īslaicīgi bloķēts. Mēģini vēlāk.";
 
         } elseif (($lietotajs["statuss"] ?? "") !== "aktīvs") {
+
             $kluda = "Konts nav apstiprināts.";
 
         } elseif (password_verify($parole, $lietotajs["parole"])) {
 
+            // Veiksmīgas pieslēgšanās gadījumā atiestata neveiksmīgos mēģinājumus
             $resetStmt = $savienojums->prepare("
                 UPDATE cm_lietotaji
-                SET login_meginajumi = 0, blokets_lidz = NULL
+                SET login_meginajumi = 0,
+                    blokets_lidz = NULL
                 WHERE lietotajs_id = ?
             ");
 
@@ -58,55 +68,58 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $resetStmt->close();
             }
 
+            // Izveido drošu lietotāja sesiju
             session_regenerate_id(true);
 
             $_SESSION["lietotajs_id"] = $lietotajs["lietotajs_id"];
             $_SESSION["lietotajvards"] = $lietotajs["lietotajvards"];
             $_SESSION["loma"] = $lietotajs["loma"];
-            $_SESSION["club_id"] = $user["club_id"];
+            $_SESSION["club_id"] = $lietotajs["club_id"] ?? null;
 
+            // Novirza lietotāju uz paneli atbilstoši viņa lomai
             $redirect = "../dashboards/user.php";
-
             $loma = trim($lietotajs["loma"]);
 
-switch ($loma) {
-    case "admin":
-    case "Administrators":
-        $redirect = "../dashboards/admin.php";
-        break;
+            switch ($loma) {
+                case "admin":
+                case "Administrators":
+                    $redirect = "../dashboards/admin.php";
+                    break;
 
-    case "Direktors":
-    case "direktors":
-        $redirect = "../dashboards/director.php";
-        break;
+                case "Direktors":
+                case "direktors":
+                    $redirect = "../dashboards/director.php";
+                    break;
 
-    case "Skolotājs":
-    case "teacher":
-        $redirect = "../dashboards/teacher.php";
-        break;
+                case "Skolotājs":
+                case "teacher":
+                    $redirect = "../dashboards/teacher.php";
+                    break;
 
-    case "Vecāks":
-    case "parent":
-        $redirect = "../dashboards/parent.php";
-        break;
+                case "Vecāks":
+                case "parent":
+                    $redirect = "../dashboards/parent.php";
+                    break;
 
-    case "Ceļameklētājs":
-    case "Skolēns":
-    case "Bērns":
-    case "student":
-    case "child":
-        $redirect = "../dashboards/student.php";
-        break;
+                case "Ceļameklētājs":
+                case "Skolēns":
+                case "Bērns":
+                case "student":
+                case "child":
+                    $redirect = "../dashboards/student.php";
+                    break;
 
-    default:
-        $redirect = "../dashboards/user.php";
-        break;
-}
+                default:
+                    $redirect = "../dashboards/user.php";
+                    break;
+            }
 
             header("Location: " . $redirect);
             exit();
 
         } else {
+
+            // Ja parole nav pareiza, palielina neveiksmīgo mēģinājumu skaitu
             $failStmt = $savienojums->prepare("
                 UPDATE cm_lietotaji
                 SET login_meginajumi = login_meginajumi + 1,
@@ -122,6 +135,7 @@ switch ($loma) {
 
             $kluda = "Nepareizi pieslēgšanās dati.";
         }
+
     } else {
         $kluda = "Nepareizi pieslēgšanās dati.";
     }

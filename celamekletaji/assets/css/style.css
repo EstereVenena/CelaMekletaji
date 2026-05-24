@@ -2154,3 +2154,38 @@ p{
         padding: .75rem 1rem;
     }
 }
+
+/* ===============================
+   NODARBĪBU GRID
+================================ */
+
+.lessons-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+}
+
+.lesson-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.lesson-card .news-actions {
+    margin-top: auto;
+    padding-top: 1rem;
+}
+
+/* Planšetes */
+@media (max-width: 992px) {
+    .lessons-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Telefoni */
+@media (max-width: 640px) {
+    .lessons-grid {
+        grid-template-columns: 1fr;
+    }
+}

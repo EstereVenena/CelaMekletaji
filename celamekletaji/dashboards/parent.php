@@ -6,6 +6,8 @@ $title = "Vecāku panelis - Ceļa meklētāji";
 
 require_once __DIR__ . "/../includes/config/database.php";
 
+// Pārbauda, vai lietotājs ir pieslēdzies un vai viņa loma ir Vecāks.
+// Ja lietotājam nav tiesību, viņš tiek novirzīts uz pieslēgšanās lapu.
 if (!isset($_SESSION["lietotajs_id"]) || !in_array(($_SESSION["loma"] ?? ""), ["Vecāks", "parent"], true)) {
     header("Location: ../auth/login.php");
     exit();
@@ -13,42 +15,10 @@ if (!isset($_SESSION["lietotajs_id"]) || !in_array(($_SESSION["loma"] ?? ""), ["
 
 $parentId = (int) ($_SESSION["lietotajs_id"] ?? 0);
 $children = [];
-$activities = [];
 $error = null;
 
-function formatEventDateRange(?string $startDate, ?string $endDate): string
-{
-    if (empty($startDate)) {
-        return "—";
-    }
-
-    $start = date("d.m.Y", strtotime($startDate));
-
-    if (!empty($endDate) && $endDate !== $startDate) {
-        $end = date("d.m.Y", strtotime($endDate));
-        return $start . " - " . $end;
-    }
-
-    return $start;
-}
-
-function formatEventTimeRange(?string $startTime, ?string $endTime): string
-{
-    if (empty($startTime)) {
-        return "";
-    }
-
-    $start = substr($startTime, 0, 5);
-
-    if (!empty($endTime) && $endTime !== $startTime) {
-        $end = substr($endTime, 0, 5);
-        return "plkst. " . $start . " - " . $end;
-    }
-
-    return "plkst. " . $start;
-}
-
-// Bērni
+// Atlasa tikai tos bērnus, kuri ir piesaistīti konkrētajam vecākam.
+// Tiek izmantota starptabula cm_parent_children, lai nodrošinātu pareizu datu sasaisti.
 $sql = "
     SELECT 
         c.lietotajs_id,
@@ -67,6 +37,7 @@ $sql = "
     ORDER BY c.vards ASC, c.uzvards ASC
 ";
 
+// Sagatavotais vaicājums pasargā sistēmu no SQL injekcijām.
 if ($stmt = $savienojums->prepare($sql)) {
     $stmt->bind_param("i", $parentId);
     $stmt->execute();
@@ -80,6 +51,7 @@ if ($stmt = $savienojums->prepare($sql)) {
 } else {
     $error = "Neizdevās ielādēt bērnu sarakstu.";
 }
+
 
 // Nākamās aktivitātes
 $activitySql = "
