@@ -273,6 +273,10 @@ for ($i = 0; $i < $count; $i++) {
     */
     if ($fileExt === "zip") {
 
+if (!class_exists('ZipArchive')) {
+    die("Kļūda: Serverī nav ieslēgts PHP ZipArchive paplašinājums.");
+}
+
         $uniqueId = uniqid("zip_", true);
         $extractPath = $tempDir . $uniqueId . "/";
 

@@ -1,10 +1,12 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 require_once __DIR__ . "/../includes/config/app.php";
 require_once __DIR__ . "/../includes/config/database.php";
 
-$redirectType = $_GET["redirect"] ?? "";
+$redirectType = $_GET["redirect"] ?? "about";
 
 /* ===============================
    DZĒŠ REMEMBER TOKEN NO DB
@@ -17,7 +19,8 @@ if (isset($_SESSION["lietotajs_id"])) {
     ");
 
     if ($stmt) {
-        $stmt->bind_param("i", $_SESSION["lietotajs_id"]);
+        $lietotajsId = (int) $_SESSION["lietotajs_id"];
+        $stmt->bind_param("i", $lietotajsId);
         $stmt->execute();
         $stmt->close();
     }
@@ -26,13 +29,31 @@ if (isset($_SESSION["lietotajs_id"])) {
 /* ===============================
    DZĒŠ REMEMBER COOKIE
 ================================ */
+$isHttps = !empty($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] !== "off";
+
 setcookie("remember_token", "", [
-    "expires" => time() - 3600,
-    "path" => "/",
-    "secure" => true,
+    "expires"  => time() - 3600,
+    "path"     => "/",
+    "secure"   => $isHttps,
     "httponly" => true,
     "samesite" => "Lax"
 ]);
+
+/* ===============================
+   DZĒŠ PHP SESIJAS COOKIE
+================================ */
+if (ini_get("session.use_cookies")) {
+    $params = session_get_cookie_params();
+
+    setcookie(session_name(), "", [
+        "expires"  => time() - 3600,
+        "path"     => $params["path"],
+        "domain"   => $params["domain"],
+        "secure"   => $isHttps,
+        "httponly" => true,
+        "samesite" => "Lax"
+    ]);
+}
 
 /* ===============================
    DZĒŠ PHP SESIJU
@@ -42,11 +63,18 @@ session_unset();
 session_destroy();
 
 /* ===============================
-   NOVIRZĪŠANA
+   DROŠA NOVIRZĪŠANA
 ================================ */
-if ($redirectType === "home") {
-    redirect("index.php");
-}
+$redirects = [
+    "home"    => "index.php",
+    "about"   => "public/about.php",
+    "clubs"   => "public/clubs.php",
+    "gallery" => "public/gallery.php",
+    "privacy" => "public/privatumapolitika.php",
+    "login"   => "auth/login.php",
+];
 
-/* Noklusētais variants */
-redirect("public/about.php");
+$target = $redirects[$redirectType] ?? "public/about.php";
+
+redirect($target);
+exit();
