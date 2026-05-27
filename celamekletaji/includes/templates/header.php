@@ -6,30 +6,55 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/../config/app.php';
 
 $isLoggedIn = isset($_SESSION["lietotajs_id"]);
-$username = trim($_SESSION["lietotajvards"] ?? '');
-$userRole = trim($_SESSION["loma"] ?? '');
+$username   = trim($_SESSION["lietotajvards"] ?? '');
+$userRole   = trim($_SESSION["loma"] ?? '');
+$currentUrl = $_SERVER['REQUEST_URI'] ?? '';
 
-// Iniciāļi avataram
+/* ===============================
+   AVATAR INICIĀĻI
+================================ */
 $initials = 'U';
+
 if ($username !== '') {
     $parts = preg_split('/\s+/', $username);
+
     if (!empty($parts[0])) {
         $initials = mb_strtoupper(mb_substr($parts[0], 0, 1));
-        if (isset($parts[1]) && $parts[1] !== '') {
+
+        if (!empty($parts[1])) {
             $initials .= mb_strtoupper(mb_substr($parts[1], 0, 1));
         }
     }
 }
 
-// Profila saite pēc lomas
-$profileUrl = BASE_URL . 'dashboards/user.php';
+/* ===============================
+   PROFILA SAITE PĒC LOMAS
+================================ */
+$roleLower = mb_strtolower($userRole);
 
-if ($userRole === 'admin') {
-    $profileUrl = BASE_URL . 'dashboards/admin.php';
-} elseif ($userRole === 'moderators') {
-    $profileUrl = BASE_URL . 'dashboards/moderator.php';
-} elseif ($userRole === 'Vecāks' || $userRole === 'parent') {
-    $profileUrl = BASE_URL . 'dashboards/parent.php';
+$profileMap = [
+    'admin'       => 'dashboards/admin.php',
+    'administrators' => 'dashboards/admin.php',
+    'moderators' => 'dashboards/moderator.php',
+    'moderator'  => 'dashboards/moderator.php',
+    'vecāks'     => 'dashboards/parent.php',
+    'parent'     => 'dashboards/parent.php',
+    'skolēns'    => 'dashboards/student.php',
+    'student'    => 'dashboards/student.php',
+    'direktors'  => 'dashboards/director.php',
+    'director'   => 'dashboards/director.php',
+    'skolotājs'  => 'dashboards/teacher.php',
+    'teacher'    => 'dashboards/teacher.php',
+];
+
+$profileUrl = BASE_URL . ($profileMap[$roleLower] ?? 'dashboards/user.php');
+
+/* ===============================
+   ACTIVE LINK FUNKCIJA
+================================ */
+function isActivePage(string $path, string $currentUrl): string
+{
+    return str_contains($currentUrl, $path) ? 'active' : '';
 }
 ?>
 <!DOCTYPE html>
@@ -37,33 +62,52 @@ if ($userRole === 'admin') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo htmlspecialchars($title ?? 'Ceļa meklētāji'); ?></title>
+    <title><?= htmlspecialchars($title ?? 'Ceļa meklētāji'); ?></title>
 
     <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <script defer>
+        window.BASE_URL = "<?= BASE_URL ?>";
+    </script>
 </head>
 <body>
 
-<header class="main-header">
+<header class="main-header" id="mainHeader">
     <div class="container nav-container">
 
         <!-- LOGO -->
-        <a href="<?= BASE_URL ?>index.php" class="logo" aria-label="Uz sākumu">
-            <img src="<?= BASE_URL ?>assets/images/logos/logo.png" alt="Ceļa meklētāji logo">
-            <span>Ceļa meklētāji</span>
+        <a href="<?= BASE_URL ?>index.php" class="logo" aria-label="Uz sākumlapu">
+            <span class="logo-img-wrap">
+                <img src="<?= BASE_URL ?>assets/images/logos/logo.png" alt="Ceļa meklētāji logo">
+            </span>
+            <span class="logo-text">Ceļa meklētāji</span>
         </a>
 
         <!-- PAGE TITLE -->
-        <?php if (!empty($lapa) && $lapa !== "Ceļa meklētāji"): ?>
-            <div class="header-title"><?php echo htmlspecialchars($lapa); ?></div>
+        <?php if (!empty($lapa)): ?>
+            <div class="header-title">
+                <?= htmlspecialchars($lapa); ?>
+            </div>
         <?php endif; ?>
 
         <!-- NAV -->
         <nav class="main-nav" id="mainNav" aria-label="Galvenā navigācija">
-            <a href="<?= BASE_URL ?>index.php">Sākums</a>
-            <a href="<?= BASE_URL ?>public/about.php">Par mums</a>
-            <a href="<?= BASE_URL ?>public/gallery.php">Galerija</a>
-            <a href="<?= BASE_URL ?>public/clubs.php">Klubi</a>
+            <a class="<?= isActivePage('/index.php', $currentUrl); ?>" href="<?= BASE_URL ?>index.php">
+                Sākums
+            </a>
+
+            <a class="<?= isActivePage('/public/about.php', $currentUrl); ?>" href="<?= BASE_URL ?>public/about.php">
+                Par mums
+            </a>
+
+            <a class="<?= isActivePage('/public/gallery.php', $currentUrl); ?>" href="<?= BASE_URL ?>public/gallery.php">
+                Galerija
+            </a>
+
+            <a class="<?= isActivePage('/public/clubs.php', $currentUrl); ?>" href="<?= BASE_URL ?>public/clubs.php">
+                Klubi
+            </a>
         </nav>
 
         <!-- RIGHT SIDE -->
@@ -82,26 +126,42 @@ if ($userRole === 'admin') {
                         type="button"
                         aria-haspopup="true"
                         aria-expanded="false"
-                        aria-label="Lietotāja izvēlne"
+                        aria-label="Atvērt lietotāja izvēlni"
                     >
                         <span class="user-avatar">
-                            <?php echo htmlspecialchars($initials); ?>
+                            <?= htmlspecialchars($initials); ?>
                         </span>
+                        <span class="user-menu-text">
+                            <strong><?= htmlspecialchars($username ?: 'Lietotājs'); ?></strong>
+                            <small><?= htmlspecialchars($userRole ?: 'Profils'); ?></small>
+                        </span>
+                        <i class="fa-solid fa-chevron-down user-menu-arrow"></i>
                     </button>
 
                     <div class="user-dropdown" id="userDropdown">
                         <div class="user-dropdown-head">
-                            <div class="user-dropdown-name">
-                                <?php echo htmlspecialchars($username ?: 'Lietotājs'); ?>
-                            </div>
-                            <div class="user-dropdown-role">
-                                <?php echo htmlspecialchars($userRole ?: ''); ?>
+                            <span class="user-dropdown-avatar">
+                                <?= htmlspecialchars($initials); ?>
+                            </span>
+
+                            <div>
+                                <div class="user-dropdown-name">
+                                    <?= htmlspecialchars($username ?: 'Lietotājs'); ?>
+                                </div>
+
+                                <?php if ($userRole !== ''): ?>
+                                    <div class="user-dropdown-role">
+                                        <?= htmlspecialchars($userRole); ?>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
 
-                        <a href="<?php echo $profileUrl; ?>" class="user-dropdown-link">
-                            <i class="fas fa-gear"></i>
-                            <span>Profila opcijas</span>
+                        <div class="user-dropdown-divider"></div>
+
+                        <a href="<?= htmlspecialchars($profileUrl); ?>" class="user-dropdown-link">
+                            <i class="fas fa-gauge"></i>
+                            <span>Mans panelis</span>
                         </a>
 
                         <a href="<?= BASE_URL ?>auth/logout.php" class="user-dropdown-link user-dropdown-link--danger">
@@ -131,6 +191,18 @@ if ($userRole === 'admin') {
 
 <script>
 (function () {
+    const header = document.getElementById('mainHeader');
+
+    window.addEventListener('scroll', function () {
+        if (!header) return;
+
+        if (window.scrollY > 12) {
+            header.classList.add('is-scrolled');
+        } else {
+            header.classList.remove('is-scrolled');
+        }
+    });
+
     // MOBILE MENU
     const btn = document.getElementById('menu-btn');
     const nav = document.getElementById('mainNav');
@@ -138,27 +210,35 @@ if ($userRole === 'admin') {
 
     function openMenu() {
         if (!btn || !nav) return;
+
         nav.classList.add('is-open');
         btn.setAttribute('aria-expanded', 'true');
         btn.setAttribute('aria-label', 'Aizvērt izvēlni');
         btn.innerHTML = '<i class="fas fa-xmark" aria-hidden="true"></i>';
+
         if (backdrop) {
             backdrop.hidden = false;
-            backdrop.classList.add('show');
+            requestAnimationFrame(() => backdrop.classList.add('show'));
         }
+
         document.body.classList.add('nav-lock');
     }
 
     function closeMenu() {
         if (!btn || !nav) return;
+
         nav.classList.remove('is-open');
         btn.setAttribute('aria-expanded', 'false');
         btn.setAttribute('aria-label', 'Atvērt izvēlni');
         btn.innerHTML = '<i class="fas fa-bars" aria-hidden="true"></i>';
+
         if (backdrop) {
             backdrop.classList.remove('show');
-            backdrop.hidden = true;
+            setTimeout(() => {
+                backdrop.hidden = true;
+            }, 180);
         }
+
         document.body.classList.remove('nav-lock');
     }
 
@@ -178,8 +258,8 @@ if ($userRole === 'admin') {
             }
         });
 
-        nav.querySelectorAll('a').forEach(function (a) {
-            a.addEventListener('click', function () {
+        nav.querySelectorAll('a').forEach(function (link) {
+            link.addEventListener('click', function () {
                 if (window.matchMedia('(max-width: 768px)').matches) {
                     closeMenu();
                 }
@@ -200,6 +280,7 @@ if ($userRole === 'admin') {
     if (avatarBtn && userMenu) {
         avatarBtn.addEventListener('click', function (e) {
             e.stopPropagation();
+
             const isOpen = userMenu.classList.toggle('open');
             avatarBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
         });

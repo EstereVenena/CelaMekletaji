@@ -22,29 +22,93 @@ if (
 $userId = (int) $_SESSION["lietotajs_id"];
 
 $lessons = [];
-
-/*
-   Ziņojumi tiek paņemti no URL pēc redirect.
-   Tas novērš Firefox "Document Expired" problēmu pēc POST formas.
-*/
 $success = trim($_GET["success"] ?? "");
 $error   = trim($_GET["error"] ?? "");
 
 /* ===============================
-   PALĪGFUNKCIJA REDIRECT ZIŅOJUMIEM
+   PALĪGFUNKCIJAS
 ================================ */
 function redirectWithMessage(string $type, string $message): void
 {
     $param = $type === "success" ? "success" : "error";
 
-    header("Location: index.php?" . $param . "=" . urlencode($message));
+    // SVARĪGI: fails atrodas kā student/lessons.php, nevis lessons/index.php
+    header("Location: lessons.php?" . $param . "=" . urlencode($message));
     exit();
+}
+
+function formatDateLv(?string $date): string
+{
+    if (empty($date) || $date === "0000-00-00") {
+        return "—";
+    }
+
+    return date("d.m.Y", strtotime($date));
+}
+
+function formatTimeLv(?string $time): string
+{
+    if (empty($time)) {
+        return "—";
+    }
+
+    return date("H:i", strtotime($time));
+}
+
+function tableExists(mysqli $db, string $table): bool
+{
+    $sql = "
+        SELECT COUNT(*) AS total
+        FROM information_schema.TABLES
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = ?
+    ";
+
+    $stmt = $db->prepare($sql);
+
+    if (!$stmt) {
+        return false;
+    }
+
+    $stmt->bind_param("s", $table);
+    $stmt->execute();
+
+    $result = $stmt->get_result();
+    $row = $result->fetch_assoc();
+
+    $stmt->close();
+
+    return (int) ($row["total"] ?? 0) > 0;
+}
+
+/* ===============================
+   TABULU PĀRBAUDE
+================================ */
+$lessonsTableExists = tableExists($savienojums, "cm_lessons");
+$applicationsTableExists = tableExists($savienojums, "cm_lesson_applications");
+
+if (!$lessonsTableExists) {
+    $error = "Tabula cm_lessons nav atrasta.";
+}
+
+if (!$applicationsTableExists) {
+    $error = "Tabula cm_lesson_applications nav atrasta. Izveido šo tabulu, lai pieteikšanās darbotos.";
 }
 
 /* ===============================
    PIETEIKŠANĀS NODARBĪBAI
 ================================ */
-if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["lesson_id"])) {
+if (
+    $_SERVER["REQUEST_METHOD"] === "POST" &&
+    isset($_POST["lesson_id"])
+) {
+    if (!$lessonsTableExists || !$applicationsTableExists) {
+        redirectWithMessage(
+            "error",
+            "Pieteikšanās nav iespējama, jo nepieciešamās datubāzes tabulas nav izveidotas."
+        );
+    }
+
     $lessonId = (int) $_POST["lesson_id"];
 
     if ($lessonId <= 0) {
@@ -84,7 +148,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["lesson_id"])) {
 
     /*
        Pārbauda, vai lietotājs jau nav pieteicies.
-       Tehniski UNIQUE KEY to arī aizsargā, bet šādi var parādīt draudzīgāku ziņu.
     */
     $alreadySql = "
         SELECT id
@@ -114,9 +177,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["lesson_id"])) {
     }
 
     /*
-       Pārbauda vietu limitu, ja max_participants ir norādīts.
+       Pārbauda vietu limitu.
     */
-    $maxParticipants = $lesson["max_participants"];
+    $maxParticipants = $lesson["max_participants"] ?? null;
 
     if (!empty($maxParticipants)) {
         $countSql = "
@@ -151,8 +214,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["lesson_id"])) {
        Saglabā pieteikumu.
     */
     $insertSql = "
-        INSERT INTO cm_lesson_applications (lesson_id, user_id, status)
-        VALUES (?, ?, 'pieteikts')
+        INSERT INTO cm_lesson_applications 
+            (lesson_id, user_id, status)
+        VALUES 
+            (?, ?, 'pieteikts')
     ";
 
     $stmt = $savienojums->prepare($insertSql);
@@ -170,9 +235,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["lesson_id"])) {
 
     $stmt->close();
 
-    /*
-       Ja tomēr dubultklikšķis vai cita sacīkstes situācija.
-    */
     if ($savienojums->errno === 1062) {
         redirectWithMessage("error", "Tu jau esi pieteicies šai nodarbībai.");
     }
@@ -183,72 +245,83 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["lesson_id"])) {
 /* ===============================
    NODARBĪBU SARAKSTS
 ================================ */
-$lessonsSql = "
-    SELECT 
-        l.id,
-        l.title,
-        l.description,
-        l.lesson_date,
-        l.lesson_time,
-        l.location,
-        l.max_participants,
+if ($lessonsTableExists && $applicationsTableExists) {
+    $lessonsSql = "
+        SELECT 
+            l.id,
+            l.title,
+            l.description,
+            l.lesson_date,
+            l.lesson_time,
+            l.location,
+            l.max_participants,
 
-        (
-            SELECT COUNT(*)
-            FROM cm_lesson_applications la
-            WHERE la.lesson_id = l.id
-              AND la.status = 'pieteikts'
-        ) AS applied_count,
+            (
+                SELECT COUNT(*)
+                FROM cm_lesson_applications la
+                WHERE la.lesson_id = l.id
+                  AND la.status = 'pieteikts'
+            ) AS applied_count,
 
-        (
-            SELECT COUNT(*)
-            FROM cm_lesson_applications la2
-            WHERE la2.lesson_id = l.id
-              AND la2.user_id = ?
-              AND la2.status = 'pieteikts'
-        ) AS user_applied
+            (
+                SELECT COUNT(*)
+                FROM cm_lesson_applications la2
+                WHERE la2.lesson_id = l.id
+                  AND la2.user_id = ?
+                  AND la2.status = 'pieteikts'
+            ) AS user_applied
 
-    FROM cm_lessons l
-    WHERE l.is_active = 1
-    ORDER BY l.lesson_date ASC, l.lesson_time ASC
-";
+        FROM cm_lessons l
+        WHERE l.is_active = 1
+        ORDER BY l.lesson_date ASC, l.lesson_time ASC
+    ";
 
-$stmt = $savienojums->prepare($lessonsSql);
+    $stmt = $savienojums->prepare($lessonsSql);
 
-if ($stmt) {
-    $stmt->bind_param("i", $userId);
-    $stmt->execute();
+    if ($stmt) {
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
 
-    $result = $stmt->get_result();
+        $result = $stmt->get_result();
 
-    while ($row = $result->fetch_assoc()) {
-        $lessons[] = $row;
+        while ($row = $result->fetch_assoc()) {
+            $lessons[] = $row;
+        }
+
+        $stmt->close();
+    } else {
+        $error = "Neizdevās ielādēt nodarbību sarakstu.";
     }
+} elseif ($lessonsTableExists) {
+    /*
+       Ja pieteikumu tabulas vēl nav, nodarbības tāpat parāda,
+       bet pieteikšanās pogu atslēdz.
+    */
+    $lessonsSql = "
+        SELECT 
+            id,
+            title,
+            description,
+            lesson_date,
+            lesson_time,
+            location,
+            max_participants,
+            0 AS applied_count,
+            0 AS user_applied
+        FROM cm_lessons
+        WHERE is_active = 1
+        ORDER BY lesson_date ASC, lesson_time ASC
+    ";
 
-    $stmt->close();
-} else {
-    $error = "Neizdevās ielādēt nodarbību sarakstu.";
-}
+    $result = $savienojums->query($lessonsSql);
 
-/* ===============================
-   DATUMA FORMATĒŠANA
-================================ */
-function formatDateLv(?string $date): string
-{
-    if (empty($date)) {
-        return "—";
+    if ($result) {
+        while ($row = $result->fetch_assoc()) {
+            $lessons[] = $row;
+        }
+    } else {
+        $error = "Neizdevās ielādēt nodarbību sarakstu.";
     }
-
-    return date("d.m.Y", strtotime($date));
-}
-
-function formatTimeLv(?string $time): string
-{
-    if (empty($time)) {
-        return "—";
-    }
-
-    return date("H:i", strtotime($time));
 }
 
 require __DIR__ . "/../includes/templates/header-student.php";
@@ -289,14 +362,15 @@ require __DIR__ . "/../includes/templates/header-student.php";
 
                 <?php foreach ($lessons as $lesson): ?>
                     <?php
-                        $lessonId = (int) $lesson["id"];
-                        $alreadyApplied = (int) $lesson["user_applied"] > 0;
-                        $appliedCount = (int) $lesson["applied_count"];
+                        $lessonId = (int) ($lesson["id"] ?? 0);
+                        $alreadyApplied = (int) ($lesson["user_applied"] ?? 0) > 0;
+                        $appliedCount = (int) ($lesson["applied_count"] ?? 0);
 
-                        $maxParticipants = $lesson["max_participants"];
+                        $maxParticipants = $lesson["max_participants"] ?? null;
                         $isFull = !empty($maxParticipants) && $appliedCount >= (int) $maxParticipants;
 
                         $description = trim($lesson["description"] ?? "");
+
                         if ($description === "") {
                             $description = "Apraksts nav pievienots.";
                         }
@@ -339,7 +413,13 @@ require __DIR__ . "/../includes/templates/header-student.php";
                         </p>
 
                         <div class="news-actions">
-                            <?php if ($alreadyApplied): ?>
+                            <?php if (!$applicationsTableExists): ?>
+
+                                <button class="btn btn-outline btn-sm" type="button" disabled>
+                                    Pieteikšanās nav aktivizēta
+                                </button>
+
+                            <?php elseif ($alreadyApplied): ?>
 
                                 <button class="btn btn-outline btn-sm" type="button" disabled>
                                     Jau pieteicies
@@ -354,7 +434,11 @@ require __DIR__ . "/../includes/templates/header-student.php";
                             <?php else: ?>
 
                                 <form method="post">
-                                    <input type="hidden" name="lesson_id" value="<?= $lessonId ?>">
+                                    <input 
+                                        type="hidden" 
+                                        name="lesson_id" 
+                                        value="<?= $lessonId ?>"
+                                    >
 
                                     <button type="submit" class="btn btn-primary btn-sm">
                                         Pieteikties
@@ -370,7 +454,9 @@ require __DIR__ . "/../includes/templates/header-student.php";
             </div>
         <?php else: ?>
             <div class="card">
-                <p class="muted">Šobrīd nav pieejamu nodarbību.</p>
+                <p class="muted">
+                    Šobrīd nav pieejamu nodarbību.
+                </p>
             </div>
         <?php endif; ?>
 
