@@ -4,6 +4,7 @@ session_start();
 $lapa  = "Ceļameklētāja panelis";
 $title = "Ceļameklētāja panelis - Ceļa meklētāji";
 
+require_once __DIR__ . "/../includes/config/app.php";
 require_once __DIR__ . "/../includes/config/database.php";
 
 /* ===============================
@@ -99,318 +100,528 @@ if ($newsResult = $savienojums->query($sqlNews)) {
 /* ===============================
    ATTĒLOŠANAS DATI
 ================================ */
-$displayName = $student["vards"]
-    ?? ($_SESSION["lietotajvards"] ?? "Ceļameklētāj");
+$displayName = trim(($student["vards"] ?? "") . " " . ($student["uzvards"] ?? ""));
+$displayName = $displayName !== ""
+    ? $displayName
+    : ($_SESSION["lietotajvards"] ?? "Ceļameklētāj");
+
+$firstName = $student["vards"] ?? ($_SESSION["lietotajvards"] ?? "Ceļameklētāj");
 
 $clubName = $student["club_name"] ?? "Nav piešķirts";
+$userRole = $student["loma"] ?? ($_SESSION["loma"] ?? "Ceļameklētājs");
+$userStatus = $student["statuss"] ?? "—";
+
+$initial = mb_strtoupper(mb_substr($displayName, 0, 1));
+
+$lessonsUrl      = BASE_URL . "student/lessons.php";
+$applicationsUrl = BASE_URL . "student/applications.php";
+$eventsUrl       = BASE_URL . "student/events.php";
+$profileUrl      = BASE_URL . "student/profile.php";
+$newsUrl         = BASE_URL . "student/news.php";
 
 require __DIR__ . "/../includes/templates/header-student.php";
 ?>
 
 <style>
-    .student-dashboard {
-        padding: 2.5rem 0;
-        min-height: 80vh;
-        background:
-            radial-gradient(circle at top left, rgba(202, 162, 89, .18), transparent 32rem),
-            radial-gradient(circle at bottom right, rgba(59, 91, 152, .14), transparent 28rem);
-    }
+.student-dashboard-page {
+    min-height: calc(100vh - 160px);
+    padding: 2.4rem 0 3.5rem;
+    background:
+        radial-gradient(circle at top right, rgba(30, 79, 161, 0.10), transparent 32%),
+        radial-gradient(circle at bottom left, rgba(244, 196, 48, 0.18), transparent 26%),
+        linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
 
+.student-hero {
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 1.2fr .8fr;
+    gap: 1.5rem;
+    align-items: center;
+    margin-bottom: 1.4rem;
+    padding: 2rem;
+    border-radius: 28px;
+    background:
+        radial-gradient(circle at top right, rgba(244,196,48,.28), transparent 34%),
+        linear-gradient(135deg, #173f84, #1e4fa1);
+    color: #fff;
+    box-shadow: 0 24px 60px rgba(23, 63, 132, 0.22);
+}
+
+.student-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px);
+    background-size: 42px 42px;
+    opacity: .35;
+}
+
+.student-hero > * {
+    position: relative;
+    z-index: 1;
+}
+
+.student-hero-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .45rem .85rem;
+    margin-bottom: 1rem;
+    border-radius: 999px;
+    background: rgba(255,255,255,.14);
+    color: #f4c430;
+    font-weight: 900;
+}
+
+.student-hero h1 {
+    margin: 0 0 .65rem;
+    color: #fff;
+    font-size: clamp(2rem, 4vw, 3rem);
+    line-height: 1.05;
+    letter-spacing: -0.045em;
+}
+
+.student-hero p {
+    max-width: 720px;
+    margin: 0;
+    color: rgba(255,255,255,.9);
+    line-height: 1.75;
+}
+
+/* ===============================
+   HERO BUTTONS - VIENĀDS STILS
+================================ */
+.student-hero-actions {
+    display: flex;
+    gap: .75rem;
+    flex-wrap: wrap;
+    margin-top: 1.35rem;
+}
+
+.student-hero-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .55rem;
+    min-width: 175px;
+    padding: .85rem 1.1rem;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 950;
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.12);
+    transition: .2s ease;
+}
+
+.student-hero-btn i {
+    color: #f4c430;
+}
+
+.student-hero-btn:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.20);
+    box-shadow: 0 18px 38px rgba(0, 0, 0, 0.18);
+}
+
+.student-hero-btn--gold {
+    color: #173f84;
+    background: linear-gradient(135deg, #f4c430, #e1aa16);
+    border-color: rgba(244, 196, 48, 0.4);
+    box-shadow: 0 12px 26px rgba(244, 196, 48, 0.26);
+}
+
+.student-hero-btn--gold i {
+    color: #173f84;
+}
+
+.student-hero-btn--gold:hover {
+    background: linear-gradient(135deg, #ffd84c, #e1aa16);
+    box-shadow: 0 18px 38px rgba(244, 196, 48, 0.34);
+}
+
+.student-hero-card {
+    padding: 1.4rem;
+    border-radius: 22px;
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.18);
+    backdrop-filter: blur(8px);
+}
+
+.student-avatar-big {
+    width: 82px;
+    height: 82px;
+    display: grid;
+    place-items: center;
+    margin-bottom: 1rem;
+    border-radius: 50%;
+    background: rgba(255,255,255,.15);
+    border: 2px solid rgba(244,196,48,.55);
+    color: #f4c430;
+    font-size: 2.1rem;
+    font-weight: 1000;
+}
+
+.student-info-list {
+    display: grid;
+    gap: .7rem;
+}
+
+.student-info-row {
+    padding: .85rem;
+    border-radius: 16px;
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.16);
+}
+
+.student-info-row span {
+    display: block;
+    color: rgba(255,255,255,.72);
+    font-size: .86rem;
+    margin-bottom: .2rem;
+}
+
+.student-info-row strong {
+    display: block;
+    color: #fff;
+    overflow-wrap: anywhere;
+}
+
+.student-alert {
+    display: flex;
+    gap: .65rem;
+    align-items: flex-start;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 18px;
+    background: #fff0f0;
+    border: 1px solid #ffd0d0;
+    color: #9b1c1c;
+    font-weight: 800;
+}
+
+.student-quick-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.4rem;
+}
+
+.student-action-card {
+    display: flex;
+    flex-direction: column;
+    gap: .85rem;
+    padding: 1.25rem;
+    border-radius: 22px;
+    background: #fff;
+    border: 1px solid #e8eef8;
+    box-shadow: 0 14px 32px rgba(16, 24, 40, 0.06);
+    transition: .2s ease;
+}
+
+.student-action-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 46px rgba(16, 24, 40, 0.10);
+    border-color: #d7e5ff;
+}
+
+.student-action-icon {
+    width: 48px;
+    height: 48px;
+    display: grid;
+    place-items: center;
+    border-radius: 15px;
+    background: #eef3ff;
+    color: #173f84;
+    font-size: 1.25rem;
+}
+
+.student-action-card h2 {
+    margin: 0;
+    color: #173f84;
+    font-size: 1.18rem;
+}
+
+.student-action-card p {
+    margin: 0;
+    color: #667085;
+    line-height: 1.55;
+    flex: 1;
+}
+
+.student-panel {
+    padding: 1.35rem;
+    border-radius: 24px;
+    background: #fff;
+    border: 1px solid #e8eef8;
+    box-shadow: 0 14px 32px rgba(16, 24, 40, 0.06);
+}
+
+.student-panel-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.student-panel-head h2 {
+    margin: 0;
+    color: #173f84;
+    font-size: 1.35rem;
+}
+
+.student-panel-head p {
+    margin: .3rem 0 0;
+    color: #667085;
+}
+
+.student-news-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 340px));
+    gap: .9rem;
+    justify-content: start;
+}
+
+.student-news-card {
+    padding: 1rem;
+    border: 1px solid #edf2fb;
+    border-radius: 20px;
+    background: #f8fbff;
+    transition: .2s ease;
+}
+
+.student-news-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 28px rgba(23, 63, 132, 0.08);
+    border-color: #d7e5ff;
+}
+
+.student-news-card h3 {
+    margin: 0 0 .35rem;
+    color: #101828;
+    font-size: 1.05rem;
+    line-height: 1.25;
+}
+
+.student-news-meta {
+    display: flex;
+    gap: .4rem;
+    flex-wrap: wrap;
+    margin-bottom: .55rem;
+    color: #667085;
+    font-size: .86rem;
+    font-weight: 800;
+}
+
+.student-news-card p {
+    margin: 0 0 .7rem;
+    color: #667085;
+    line-height: 1.5;
+}
+
+.student-empty {
+    padding: 1.2rem;
+    border-radius: 18px;
+    background: #f8fbff;
+    border: 1px dashed #cfe0ff;
+    color: #667085;
+}
+
+@media (max-width: 980px) {
     .student-hero {
-        display: block;
-        margin-bottom: 1.5rem;
+        grid-template-columns: 1fr;
     }
 
-    .hero-card,
-    .dashboard-panel {
-        background: rgba(255, 255, 255, .94);
-        border: 1px solid rgba(0, 0, 0, .06);
-        border-radius: 24px;
-        box-shadow: 0 16px 40px rgba(0, 0, 0, .08);
+    .student-quick-grid,
+    .student-news-grid {
+        grid-template-columns: 1fr;
     }
 
-    .hero-card {
-        padding: 2rem;
-        position: relative;
-        overflow: hidden;
+    .student-panel-head {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 640px) {
+    .student-dashboard-page {
+        padding: 1.5rem 0 2.5rem;
     }
 
-    .hero-card::after {
-        content: "";
-        position: absolute;
-        width: 190px;
-        height: 190px;
-        right: -70px;
-        top: -70px;
-        background: rgba(202, 162, 89, .18);
-        border-radius: 50%;
-        pointer-events: none;
+    .student-hero,
+    .student-panel {
+        border-radius: 20px;
+        padding: 1.2rem;
     }
 
-    .hero-label {
-        display: inline-flex;
-        align-items: center;
-        gap: .4rem;
-        padding: .35rem .8rem;
-        border-radius: 999px;
-        background: rgba(202, 162, 89, .16);
-        color: #7a5517;
-        font-size: .85rem;
-        font-weight: 700;
-        margin-bottom: .85rem;
+    .student-hero-btn,
+    .student-action-card .btn,
+    .student-panel-head .btn {
+        width: 100%;
     }
-
-    .hero-card h2 {
-        margin: 0 0 .6rem;
-        font-size: clamp(1.8rem, 4vw, 3rem);
-        line-height: 1.05;
-        position: relative;
-        z-index: 1;
-    }
-
-    .hero-card .lead {
-        max-width: 720px;
-        margin-bottom: 1rem;
-        position: relative;
-        z-index: 1;
-    }
-
-    .club-info {
-        display: inline-flex;
-        align-items: center;
-        gap: .45rem;
-        padding: .6rem .95rem;
-        margin: .25rem 0 1.25rem;
-        border-radius: 999px;
-        background: rgba(59, 91, 152, .10);
-        color: #2f4f8f;
-        font-size: .95rem;
-        position: relative;
-        z-index: 1;
-    }
-
-    .club-info span {
-        color: #666;
-    }
-
-    .club-info strong {
-        color: #263f73;
-    }
-
-    .hero-actions {
-        display: flex;
-        gap: .75rem;
-        flex-wrap: wrap;
-        position: relative;
-        z-index: 1;
-    }
-
-    .quick-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .action-card {
-        padding: 1.5rem;
-        border-radius: 22px;
-        background: #fff;
-        border: 1px solid rgba(0, 0, 0, .06);
-        box-shadow: 0 12px 28px rgba(0, 0, 0, .06);
-        transition: transform .18s ease, box-shadow .18s ease;
-    }
-
-    .action-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 16px 36px rgba(0, 0, 0, .1);
-    }
-
-    .action-icon {
-        width: 46px;
-        height: 46px;
-        border-radius: 16px;
-        display: grid;
-        place-items: center;
-        background: rgba(202, 162, 89, .16);
-        font-size: 1.35rem;
-        margin-bottom: .85rem;
-    }
-
-    .action-card h3,
-    .dashboard-panel h3 {
-        margin-top: 0;
-    }
-
-    .dashboard-panel {
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .news-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 1rem;
-    }
-
-    .news-card {
-        padding: 1.1rem;
-        border-radius: 18px;
-        background: #fff;
-        border: 1px solid rgba(0, 0, 0, .06);
-        transition: transform .18s ease, box-shadow .18s ease;
-    }
-
-    .news-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 12px 28px rgba(0, 0, 0, .08);
-    }
-
-    .news-card h4 {
-        margin-top: 0;
-        margin-bottom: .35rem;
-    }
-
-    .news-meta {
-        font-size: .85rem;
-        color: #777;
-        margin-bottom: .55rem;
-    }
-
-    .empty-message {
-        padding: 1rem;
-        border-radius: 16px;
-        background: rgba(0, 0, 0, .03);
-    }
-
-    @media (max-width: 850px) {
-        .quick-grid,
-        .news-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .hero-card {
-            padding: 1.5rem;
-        }
-
-        .hero-actions .btn {
-            width: 100%;
-            justify-content: center;
-            text-align: center;
-        }
-
-        .club-info {
-            border-radius: 16px;
-            align-items: flex-start;
-        }
-    }
+}
 </style>
 
-<main class="student-dashboard">
+<main class="student-dashboard-page">
     <div class="container">
 
-        <!-- GALVENE -->
         <section class="student-hero">
-            <div class="hero-card">
-                <span class="hero-label">Ceļameklētāja panelis</span>
-
-                <h2>Sveiki, <?php echo htmlspecialchars($displayName); ?>!</h2>
-
-                <p class="lead">
-                    Šeit vari ātri apskatīt pieejamās nodarbības, pārbaudīt savus pieteikumus
-                    un sekot jaunākajai informācijai.
-                </p>
-
-                <div class="club-info">
-                    <span>📍 Mans klubs:</span>
-                    <strong><?php echo htmlspecialchars($clubName); ?></strong>
+            <div>
+                <div class="student-hero-kicker">
+                    <i class="fas fa-compass"></i>
+                    Ceļameklētāja piekļuve
                 </div>
 
-                <div class="hero-actions">
-                    <a class="btn btn-primary" href="../lessons/index.php">
-                        Skatīt nodarbības
+                <h1>Sveiki, <?= htmlspecialchars($firstName); ?>!</h1>
+
+                <p>
+                    Šeit vari apskatīt savas nodarbības, pieteikumus, pasākumus un jaunāko informāciju.
+                    Viss vienā vietā — bez klikšķu ekspedīcijas pa digitālajiem džungļiem.
+                </p>
+
+                <div class="student-hero-actions">
+                    <a class="student-hero-btn student-hero-btn--gold" href="<?= $lessonsUrl; ?>">
+                        <i class="fas fa-book-open"></i>
+                        <span>Skatīt nodarbības</span>
                     </a>
 
-                    <a class="btn btn-outline" href="../applications/index.php">
-                        Mani pieteikumi
+                    <a class="student-hero-btn" href="<?= $applicationsUrl; ?>">
+                        <i class="fas fa-clipboard-check"></i>
+                        <span>Mani pieteikumi</span>
+                    </a>
+
+                    <a class="student-hero-btn" href="<?= $profileUrl; ?>">
+                        <i class="fas fa-user-gear"></i>
+                        <span>Mans profils</span>
                     </a>
                 </div>
             </div>
+
+            <aside class="student-hero-card">
+                <div class="student-avatar-big">
+                    <?= htmlspecialchars($initial); ?>
+                </div>
+
+                <div class="student-info-list">
+                    <div class="student-info-row">
+                        <span>Mans klubs</span>
+                        <strong><?= htmlspecialchars($clubName); ?></strong>
+                    </div>
+
+                    <div class="student-info-row">
+                        <span>Loma</span>
+                        <strong><?= htmlspecialchars($userRole); ?></strong>
+                    </div>
+
+                    <div class="student-info-row">
+                        <span>Statuss</span>
+                        <strong><?= htmlspecialchars($userStatus); ?></strong>
+                    </div>
+                </div>
+            </aside>
         </section>
 
-        <!-- KĻŪDAS PAZIŅOJUMS -->
         <?php if ($error): ?>
-            <div class="dashboard-panel">
-                <p class="muted">
-                    <?php echo htmlspecialchars($error); ?>
-                </p>
+            <div class="student-alert">
+                <i class="fas fa-triangle-exclamation"></i>
+                <span><?= htmlspecialchars($error); ?></span>
             </div>
         <?php endif; ?>
 
-        <!-- ĀTRĀ PIEKĻUVE -->
-        <section class="quick-grid">
-            <article class="action-card">
-                <div class="action-icon">📚</div>
+        <section class="student-quick-grid">
+            <article class="student-action-card">
+                <div class="student-action-icon">
+                    <i class="fas fa-book-open"></i>
+                </div>
 
-                <h3>Pieejamās nodarbības</h3>
+                <h2>Pieejamās nodarbības</h2>
 
-                <p class="muted">
+                <p>
                     Apskati nodarbības un izvēlies tās, kurās vēlies piedalīties.
                 </p>
 
-                <a class="btn btn-primary btn-sm" href="../lessons/index.php">
+                <a class="btn btn-primary btn-sm" href="<?= $lessonsUrl; ?>">
                     Atvērt nodarbības
                 </a>
             </article>
 
-            <article class="action-card">
-                <div class="action-icon">✅</div>
+            <article class="student-action-card">
+                <div class="student-action-icon">
+                    <i class="fas fa-clipboard-check"></i>
+                </div>
 
-                <h3>Mani pieteikumi</h3>
+                <h2>Mani pieteikumi</h2>
 
-                <p class="muted">
+                <p>
                     Pārskati nodarbības vai pasākumus, kuriem jau esi pieteicies.
                 </p>
 
-                <a class="btn btn-outline btn-sm" href="../applications/index.php">
+                <a class="btn btn-outline btn-sm" href="<?= $applicationsUrl; ?>">
                     Skatīt pieteikumus
+                </a>
+            </article>
+
+            <article class="student-action-card">
+                <div class="student-action-icon">
+                    <i class="fas fa-calendar-days"></i>
+                </div>
+
+                <h2>Pasākumi</h2>
+
+                <p>
+                    Apskati gaidāmos pasākumus un informāciju par aktivitātēm.
+                </p>
+
+                <a class="btn btn-outline btn-sm" href="<?= $eventsUrl; ?>">
+                    Skatīt pasākumus
                 </a>
             </article>
         </section>
 
-        <!-- JAUNUMI -->
-        <section class="dashboard-panel">
-            <div class="section-title-row" style="margin-bottom:1rem;">
+        <section class="student-panel">
+            <div class="student-panel-head">
                 <div>
-                    <h3>Jaunākie jaunumi</h3>
-                    <p class="muted">Aktuālā informācija no “Ceļa meklētāji”.</p>
+                    <h2>Jaunumi</h2>
+                    <p>Aktuālā informācija no “Ceļa meklētāji”.</p>
                 </div>
+
+                <a class="btn btn-outline btn-sm" href="<?= $newsUrl; ?>">
+                    Visi jaunumi
+                </a>
             </div>
 
             <?php if (empty($news)): ?>
-                <p class="muted empty-message">Pašlaik nav pieejamu jaunumu.</p>
+                <div class="student-empty">
+                    Pašlaik nav pieejamu jaunumu.
+                </div>
             <?php else: ?>
-                <div class="news-grid">
+                <div class="student-news-grid">
                     <?php foreach ($news as $item): ?>
-                        <article class="news-card">
-                            <h4>
-                                <?php echo htmlspecialchars($item["title"] ?? "Bez nosaukuma"); ?>
-                            </h4>
+                        <?php
+                            $desc = trim($item["description"] ?? "");
+                        ?>
 
-                            <div class="news-meta">
-                                <?php echo htmlspecialchars($item["category"] ?? "Jaunumi"); ?>
-                                &nbsp;•&nbsp;
-                                <?php echo htmlspecialchars(formatDateLv($item["publish_date"] ?? null)); ?>
+                        <article class="student-news-card">
+                            <h3>
+                                <?= htmlspecialchars($item["title"] ?? "Bez nosaukuma"); ?>
+                            </h3>
+
+                            <div class="student-news-meta">
+                                <span><?= htmlspecialchars($item["category"] ?? "Jaunumi"); ?></span>
+                                <span>•</span>
+                                <span><?= htmlspecialchars(formatDateLv($item["publish_date"] ?? null)); ?></span>
                             </div>
 
-                            <p class="muted">
-                                <?php
-                                    $desc = trim($item["description"] ?? "");
-                                    echo htmlspecialchars(mb_strimwidth($desc, 0, 130, "..."));
-                                ?>
+                            <p>
+                                <?= htmlspecialchars(mb_strimwidth($desc, 0, 130, "...")); ?>
                             </p>
 
-                            <a class="link" href="../news/view.php?id=<?php echo (int) ($item["id"] ?? 0); ?>">
+                            <a class="link" href="<?= $newsUrl; ?>?id=<?= (int) ($item["id"] ?? 0); ?>">
                                 Lasīt vairāk
                             </a>
                         </article>
