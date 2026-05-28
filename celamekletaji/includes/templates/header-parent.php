@@ -49,16 +49,21 @@ function parentNavActive(array $pages, string $currentPage): string
 /* ===============================
    SAITES
 ================================ */
-$dashboardUrl     = BASE_URL . 'dashboards/parent.php';
-$childrenUrl      = BASE_URL . 'children/manage.php';
-$activitiesUrl    = BASE_URL . 'parent/activities.php';
-$paymentsUrl      = BASE_URL . 'parent/payments.php';
-$notificationsUrl = BASE_URL . 'parent/notifications.php';
-$profileUrl       = BASE_URL . 'parent/profile.php';
-$logoutUrl        = BASE_URL . 'auth/logout.php';
-$homeUrl          = BASE_URL . 'auth/logout.php?redirect=home';
-?>
+$dashboardUrl           = BASE_URL . 'dashboards/parent.php';
+$childrenUrl            = BASE_URL . 'parent/children/manage.php';
 
+/*
+   Pieteiktās aktivitātes = aktivitātes, kur bērni jau ir pieteikti
+   Pieejamās aktivitātes = visas aktivitātes, uz kurām var pieteikties
+*/
+$signedActivitiesUrl    = BASE_URL . 'parent/activities.php';
+$availableActivitiesUrl = BASE_URL . 'parent/available-activities.php';
+
+$paymentsUrl            = BASE_URL . 'parent/payments.php';
+$profileUrl             = BASE_URL . 'parent/profile.php';
+$logoutUrl              = BASE_URL . 'auth/logout.php';
+$homeUrl                = BASE_URL . 'auth/logout.php?redirect=home';
+?>
 <!DOCTYPE html>
 <html lang="lv">
 <head>
@@ -470,14 +475,14 @@ $homeUrl          = BASE_URL . 'auth/logout.php?redirect=home';
                 <span>Mani bērni</span>
             </a>
 
-            <a href="<?= $activitiesUrl ?>" class="<?= parentNavActive(['activities.php'], $currentPage) ?>">
+                    <a href="<?= $signedActivitiesUrl ?>" class="<?= parentNavActive(['activities.php'], $currentPage) ?>">
                 <i class="fas fa-calendar-check"></i>
-                <span>Aktivitātes</span>
+                <span>Pieteiktās aktivitātes</span>
             </a>
 
-            <a href="<?= $notificationsUrl ?>" class="<?= parentNavActive(['notifications.php'], $currentPage) ?>">
-                <i class="fas fa-bell"></i>
-                <span>Paziņojumi</span>
+            <a href="<?= $availableActivitiesUrl ?>" class="<?= parentNavActive(['available-activities.php'], $currentPage) ?>">
+                <i class="fas fa-list-check"></i>
+                <span>Pieejamās aktivitātes</span>
             </a>
 
         </nav>
@@ -530,14 +535,14 @@ $homeUrl          = BASE_URL . 'auth/logout.php?redirect=home';
                         <span>Mani bērni</span>
                     </a>
 
-                    <a href="<?= $activitiesUrl ?>" class="parent-dropdown-link">
+                    <a href="<?= $signedActivitiesUrl ?>" class="parent-dropdown-link">
                         <i class="fas fa-calendar-check"></i>
-                        <span>Aktivitātes</span>
+                        <span>Pieteiktās aktivitātes</span>
                     </a>
 
-                    <a href="<?= $notificationsUrl ?>" class="parent-dropdown-link">
-                        <i class="fas fa-bell"></i>
-                        <span>Paziņojumi</span>
+                    <a href="<?= $availableActivitiesUrl ?>" class="parent-dropdown-link">
+                        <i class="fas fa-list-check"></i>
+                        <span>Pieejamās aktivitātes</span>
                     </a>
 
                     <a href="<?= $homeUrl ?>" class="parent-dropdown-link">

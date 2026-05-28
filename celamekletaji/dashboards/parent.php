@@ -217,9 +217,13 @@ require __DIR__ . "/../includes/templates/header-parent.php";
     line-height: 1.55;
 }
 
+/* ===============================
+   STATS
+================================ */
+
 .parent-stats {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
     margin-bottom: 1.4rem;
 }
@@ -279,6 +283,10 @@ require __DIR__ . "/../includes/templates/header-parent.php";
     flex-shrink: 0;
 }
 
+/* ===============================
+   PANELS
+================================ */
+
 .parent-grid {
     display: grid;
     grid-template-columns: 1.15fr .85fr;
@@ -312,6 +320,45 @@ require __DIR__ . "/../includes/templates/header-parent.php";
     color: #667085;
     font-size: .95rem;
 }
+
+/* ===============================
+   REDZAMĀS DARBĪBU POGAS
+================================ */
+
+.parent-panel-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    min-width: 165px;
+    padding: .85rem 1.1rem;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #173f84, #1e4fa1);
+    color: #fff !important;
+    text-decoration: none;
+    font-weight: 950;
+    box-shadow: 0 12px 26px rgba(23, 63, 132, 0.20);
+    transition: .2s ease;
+}
+
+.parent-panel-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 18px 38px rgba(23, 63, 132, 0.28);
+}
+
+.parent-panel-action--gold {
+    background: linear-gradient(135deg, #f4c430, #e1aa16);
+    color: #173f84 !important;
+    box-shadow: 0 12px 26px rgba(244, 196, 48, 0.26);
+}
+
+.parent-panel-action--gold:hover {
+    box-shadow: 0 18px 38px rgba(244, 196, 48, 0.34);
+}
+
+/* ===============================
+   CHILDREN + ACTIVITIES
+================================ */
 
 .parent-child-list,
 .parent-activity-list {
@@ -423,6 +470,10 @@ require __DIR__ . "/../includes/templates/header-parent.php";
     font-weight: 800;
 }
 
+/* ===============================
+   RESPONSIVE
+================================ */
+
 @media (max-width: 980px) {
     .parent-hero {
         grid-template-columns: 1fr;
@@ -463,7 +514,9 @@ require __DIR__ . "/../includes/templates/header-parent.php";
     }
 
     .parent-hero-actions .btn,
+    .parent-hero-actions .parent-panel-action,
     .parent-panel-head .btn,
+    .parent-panel-action,
     .parent-child-actions .btn {
         width: 100%;
     }
@@ -488,17 +541,17 @@ require __DIR__ . "/../includes/templates/header-parent.php";
                 </p>
 
                 <div class="parent-hero-actions">
-                    <a class="btn btn-primary btn-sm" href="../children/add.php">
+                    <a class="btn btn-primary btn-sm" href="../parent/children/add.php">
                         <i class="fas fa-child-reaching"></i>
                         Pievienot bērnu
                     </a>
 
-                    <a class="btn btn-outline btn-sm" href="../children/manage.php">
+                    <a class="parent-panel-action parent-panel-action--gold" href="../parent/children/manage.php">
                         <i class="fas fa-children"></i>
                         Pārvaldīt bērnus
                     </a>
 
-                    <a class="btn btn-outline btn-sm" href="../parent/activities.php">
+                    <a class="parent-panel-action parent-panel-action--gold" href="../parent/activities.php">
                         <i class="fas fa-calendar-check"></i>
                         Aktivitātes
                     </a>
@@ -520,34 +573,34 @@ require __DIR__ . "/../includes/templates/header-parent.php";
                 <?= htmlspecialchars($error); ?>
             </div>
         <?php endif; ?>
-<section class="parent-stats">
-    <div class="parent-stat-card">
-        <div class="parent-stat-top">
-            <div>
-                <p class="parent-stat-label">Pievienotie bērni</p>
-                <p class="parent-stat-value"><?= (int)$childrenCount; ?></p>
+
+        <section class="parent-stats">
+            <div class="parent-stat-card">
+                <div class="parent-stat-top">
+                    <div>
+                        <p class="parent-stat-label">Pievienotie bērni</p>
+                        <p class="parent-stat-value"><?= (int)$childrenCount; ?></p>
+                    </div>
+
+                    <span class="parent-stat-icon">
+                        <i class="fas fa-children"></i>
+                    </span>
+                </div>
             </div>
 
-            <span class="parent-stat-icon">
-                <i class="fas fa-children"></i>
-            </span>
-        </div>
-    </div>
+            <div class="parent-stat-card">
+                <div class="parent-stat-top">
+                    <div>
+                        <p class="parent-stat-label">Tuvākās aktivitātes</p>
+                        <p class="parent-stat-value"><?= (int)$activitiesCount; ?></p>
+                    </div>
 
-    <div class="parent-stat-card">
-        <div class="parent-stat-top">
-            <div>
-                <p class="parent-stat-label">Tuvākās aktivitātes</p>
-                <p class="parent-stat-value"><?= (int)$activitiesCount; ?></p>
+                    <span class="parent-stat-icon">
+                        <i class="fas fa-calendar-days"></i>
+                    </span>
+                </div>
             </div>
-
-            <span class="parent-stat-icon">
-                <i class="fas fa-calendar-days"></i>
-            </span>
-        </div>
-    </div>
-</section>
-</section>
+        </section>
 
         <section class="parent-grid">
 
@@ -560,8 +613,9 @@ require __DIR__ . "/../includes/templates/header-parent.php";
                         </p>
                     </div>
 
-                    <a class="btn btn-outline btn-sm" href="../children/manage.php">
-                        Pārvaldīt
+                    <a class="parent-panel-action" href="../parent/children/manage.php">
+                        <i class="fas fa-children"></i>
+                        Pārvaldīt bērnus
                     </a>
                 </div>
 
@@ -569,7 +623,7 @@ require __DIR__ . "/../includes/templates/header-parent.php";
                     <div class="parent-empty">
                         <p>
                             Pagaidām nav pievienotu bērnu.
-                            <a class="link" href="../children/add.php">Pievienot bērnu</a>
+                            <a class="link" href="../parent/children/add.php">Pievienot bērnu</a>
                         </p>
                     </div>
                 <?php else: ?>
@@ -613,11 +667,11 @@ require __DIR__ . "/../includes/templates/header-parent.php";
                                 </div>
 
                                 <div class="parent-child-actions">
-                                    <a class="btn btn-outline btn-sm" href="../children/view.php?id=<?= (int)$child['lietotajs_id']; ?>">
+                                    <a class="btn btn-outline btn-sm" href="../parent/children/view.php?id=<?= (int)$child['lietotajs_id']; ?>">
                                         Skatīt
                                     </a>
 
-                                    <a class="btn btn-sm" href="../children/edit.php?id=<?= (int)$child['lietotajs_id']; ?>">
+                                    <a class="btn btn-sm" href="../parent/children/edit.php?id=<?= (int)$child['lietotajs_id']; ?>">
                                         Rediģēt
                                     </a>
                                 </div>
@@ -636,15 +690,16 @@ require __DIR__ . "/../includes/templates/header-parent.php";
                         </p>
                     </div>
 
-                    <a class="btn btn-outline btn-sm" href="../parent/activities.php">
-                        Kalendārs
+                    <a class="parent-panel-action" href="../parent/activities.php">
+                        <i class="fas fa-calendar-check"></i>
+                        Skatīt aktivitātes
                     </a>
                 </div>
 
                 <?php if (empty($activities)): ?>
                     <div class="parent-empty">
                         <p>
-                            Nav gaidāmu aktivitāšu. Klusums ēterā — pagaidām bez trauksmes.
+                            Nav gaidāmu aktivitāšu.
                         </p>
                     </div>
                 <?php else: ?>
