@@ -6,7 +6,10 @@ $title = "Aktivitātes - Ceļa meklētāji";
 
 require_once __DIR__ . "/../includes/config/database.php";
 
-if (!isset($_SESSION["lietotajs_id"]) || !in_array(($_SESSION["loma"] ?? ""), ["Vecāks", "parent"], true)) {
+if (
+    !isset($_SESSION["lietotajs_id"]) ||
+    !in_array(($_SESSION["loma"] ?? ""), ["Vecāks", "parent"], true)
+) {
     header("Location: ../auth/login.php");
     exit();
 }
@@ -66,6 +69,9 @@ if ($stmt = $savienojums->prepare($sql)) {
     $error = "Neizdevās sagatavot SQL vaicājumu.";
 }
 
+/* ===============================
+   KALENDĀRA DATI
+================================ */
 $calendarItems = [];
 
 foreach ($activities as $activity) {
@@ -175,41 +181,477 @@ function formatEventTimeRange(?string $startTime, ?string $endTime): string
     return "plkst. " . $start;
 }
 
+$activitiesCount = count($activities);
+
 require __DIR__ . "/../includes/templates/header-parent.php";
 ?>
 
-<main class="dashboard-main">
+<style>
+.parent-activities-page {
+    min-height: calc(100vh - 160px);
+    padding: 2.4rem 0 3.5rem;
+    background:
+        radial-gradient(circle at top right, rgba(30, 79, 161, 0.10), transparent 32%),
+        radial-gradient(circle at bottom left, rgba(244, 196, 48, 0.18), transparent 26%),
+        linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
+
+.activities-hero {
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 1.2fr .8fr;
+    gap: 1.5rem;
+    align-items: center;
+    margin-bottom: 1.4rem;
+    padding: 2rem;
+    border-radius: 28px;
+    background:
+        radial-gradient(circle at top right, rgba(244,196,48,.28), transparent 34%),
+        linear-gradient(135deg, #173f84, #1e4fa1);
+    color: #fff;
+    box-shadow: 0 24px 60px rgba(23, 63, 132, 0.22);
+}
+
+.activities-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px);
+    background-size: 42px 42px;
+    opacity: .35;
+}
+
+.activities-hero > * {
+    position: relative;
+    z-index: 1;
+}
+
+.activities-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .45rem .85rem;
+    margin-bottom: 1rem;
+    border-radius: 999px;
+    background: rgba(255,255,255,.14);
+    color: #f4c430;
+    font-weight: 900;
+}
+
+.activities-hero h1 {
+    margin: 0 0 .65rem;
+    color: #fff;
+    font-size: clamp(2rem, 4vw, 3rem);
+    line-height: 1.05;
+    letter-spacing: -0.045em;
+}
+
+.activities-hero p {
+    max-width: 720px;
+    margin: 0;
+    color: rgba(255,255,255,.9);
+    line-height: 1.75;
+}
+
+.activities-hero-actions {
+    display: flex;
+    gap: .75rem;
+    flex-wrap: wrap;
+    margin-top: 1.35rem;
+}
+
+.activities-hero-card {
+    padding: 1.4rem;
+    border-radius: 22px;
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.18);
+    backdrop-filter: blur(8px);
+}
+
+.activities-hero-card strong {
+    display: block;
+    font-size: 2.1rem;
+    line-height: 1;
+    color: #f4c430;
+}
+
+.activities-hero-card span {
+    display: block;
+    margin-top: .5rem;
+    color: rgba(255,255,255,.86);
+    line-height: 1.55;
+}
+
+.activities-alert {
+    display: flex;
+    gap: .65rem;
+    align-items: flex-start;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 18px;
+    background: #fff0f0;
+    border: 1px solid #ffd0d0;
+    color: #9b1c1c;
+    font-weight: 800;
+}
+
+.calendar-card,
+.activities-list-card {
+    padding: 1.35rem;
+    border-radius: 24px;
+    background: #fff;
+    border: 1px solid #e8eef8;
+    box-shadow: 0 14px 32px rgba(16, 24, 40, 0.06);
+}
+
+.calendar-card {
+    margin-bottom: 1.2rem;
+}
+
+.calendar-toolbar {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+    margin-bottom: 1.2rem;
+}
+
+.calendar-toolbar h2 {
+    margin: 0;
+    color: #173f84;
+    font-size: 1.45rem;
+}
+
+.calendar-toolbar p {
+    margin: .3rem 0 0;
+    color: #667085;
+}
+
+.calendar-nav {
+    display: flex;
+    gap: .55rem;
+    flex-wrap: wrap;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: .65rem;
+}
+
+.calendar-head {
+    font-weight: 900;
+    color: #173f84;
+    text-align: center;
+    padding: .65rem;
+    background: #eef3ff;
+    border-radius: 14px;
+}
+
+.calendar-day {
+    min-height: 135px;
+    background: #fff;
+    border: 1px solid #edf2fb;
+    border-radius: 18px;
+    padding: .7rem;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+    transition: .2s ease;
+}
+
+.calendar-day:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 28px rgba(23, 63, 132, 0.08);
+    border-color: #d7e5ff;
+}
+
+.calendar-empty {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.calendar-empty:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.calendar-today {
+    border: 2px solid #f4c430;
+    background: #fffdf3;
+}
+
+.calendar-date {
+    display: inline-flex;
+    width: 30px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: .5rem;
+    border-radius: 50%;
+    color: #173f84;
+    font-weight: 1000;
+    background: #eef3ff;
+}
+
+.calendar-today .calendar-date {
+    background: #f4c430;
+    color: #173f84;
+}
+
+.calendar-event {
+    background: linear-gradient(135deg, #1e4fa1, #173f84);
+    color: #fff;
+    border-radius: 14px;
+    padding: .5rem .6rem;
+    margin-bottom: .4rem;
+    font-size: .82rem;
+    box-shadow: 0 10px 20px rgba(23, 63, 132, 0.15);
+}
+
+.calendar-event-multiday {
+    background: linear-gradient(135deg, #f4c430, #e1aa16);
+    color: #173f84;
+}
+
+.calendar-event strong,
+.calendar-event span,
+.calendar-event small {
+    display: block;
+}
+
+.calendar-event strong {
+    line-height: 1.2;
+}
+
+.calendar-event span {
+    margin-top: .18rem;
+    opacity: .92;
+}
+
+.calendar-event small {
+    opacity: .9;
+    margin-top: .15rem;
+}
+
+.activities-list-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.activities-list-head h2 {
+    margin: 0;
+    color: #173f84;
+    font-size: 1.35rem;
+}
+
+.activities-list-head p {
+    margin: .3rem 0 0;
+    color: #667085;
+}
+
+.activities-count {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .75rem 1rem;
+    border-radius: 999px;
+    background: #eef3ff;
+    color: #173f84;
+    font-weight: 950;
+    white-space: nowrap;
+}
+
+.activity-list {
+    display: grid;
+    gap: .9rem;
+}
+
+.activity-card {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid #edf2fb;
+    border-radius: 20px;
+    background: #f8fbff;
+    transition: .2s ease;
+}
+
+.activity-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 28px rgba(23, 63, 132, 0.08);
+    border-color: #d7e5ff;
+}
+
+.activity-card h3 {
+    margin: 0 0 .4rem;
+    color: #101828;
+    font-size: 1.08rem;
+}
+
+.activity-meta {
+    display: flex;
+    gap: .55rem;
+    flex-wrap: wrap;
+    margin-top: .55rem;
+}
+
+.activity-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .34rem .65rem;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid #edf2fb;
+    color: #667085;
+    font-size: .84rem;
+    font-weight: 800;
+}
+
+.activity-pill i {
+    color: #1e4fa1;
+}
+
+.activity-desc {
+    margin: .75rem 0 0;
+    color: #667085;
+    line-height: 1.55;
+}
+
+.activity-status {
+    align-self: flex-start;
+    white-space: nowrap;
+}
+
+.activities-empty {
+    padding: 1.4rem;
+    border-radius: 20px;
+    background: #f8fbff;
+    border: 1px dashed #cfe0ff;
+    color: #667085;
+    text-align: center;
+}
+
+.activities-empty h3 {
+    margin: 0 0 .4rem;
+    color: #173f84;
+}
+
+@media (max-width: 980px) {
+    .activities-hero,
+    .activity-card {
+        grid-template-columns: 1fr;
+    }
+
+    .calendar-toolbar,
+    .activities-list-head {
+        flex-direction: column;
+    }
+
+    .calendar-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .calendar-head,
+    .calendar-empty {
+        display: none;
+    }
+
+    .calendar-day {
+        min-height: auto;
+    }
+}
+
+@media (max-width: 640px) {
+    .parent-activities-page {
+        padding: 1.5rem 0 2.5rem;
+    }
+
+    .activities-hero,
+    .calendar-card,
+    .activities-list-card {
+        border-radius: 20px;
+        padding: 1.2rem;
+    }
+
+    .activities-hero-actions .btn,
+    .calendar-nav .btn {
+        width: 100%;
+    }
+
+    .calendar-nav {
+        width: 100%;
+    }
+}
+</style>
+
+<main class="parent-activities-page">
     <div class="container">
 
-        <div class="dashboard-header">
-            <h2>Aktivitāšu kalendārs</h2>
-            <p class="lead">Šeit redzamas aktivitātes, kurās ir pieteikti jūsu bērni.</p>
-        </div>
+        <section class="activities-hero">
+            <div>
+                <div class="activities-kicker">
+                    <i class="fas fa-calendar-check"></i>
+                    Bērnu aktivitātes
+                </div>
+
+                <h1>Aktivitāšu kalendārs</h1>
+
+                <p>
+                    Šeit redzamas aktivitātes, kurās ir pieteikti jūsu bērni.
+                    Var pārskatīt gan kalendāru, gan detalizētu aktivitāšu sarakstu.
+                </p>
+
+                <div class="activities-hero-actions">
+                    <a class="btn btn-primary btn-sm" href="../dashboards/parent.php">
+                        <i class="fas fa-arrow-left"></i>
+                        Atpakaļ uz paneli
+                    </a>
+                </div>
+            </div>
+
+            <aside class="activities-hero-card">
+                <strong><?= (int)$activitiesCount; ?></strong>
+                <span>
+                    Aktivitātes, kurās bērni pašlaik ir pieteikti vai apstiprināti.
+                </span>
+            </aside>
+        </section>
 
         <?php if ($error): ?>
-            <div class="dashboard-card" style="border-left:4px solid #c0392b;">
-                <p class="muted"><?php echo htmlspecialchars($error); ?></p>
+            <div class="activities-alert">
+                <i class="fas fa-triangle-exclamation"></i>
+                <span><?= htmlspecialchars($error); ?></span>
             </div>
         <?php endif; ?>
 
-        <div class="dashboard-card">
-            <div class="section-title-row" style="margin-bottom:1rem;">
+        <section class="calendar-card">
+            <div class="calendar-toolbar">
                 <div>
-                    <h3><?php echo htmlspecialchars($monthNames[$month] . " " . $year); ?></h3>
-                    <p class="muted small">Kalendārs ar bērnu pieteiktajām aktivitātēm.</p>
+                    <h2><?= htmlspecialchars($monthNames[$month] . " " . $year); ?></h2>
+                    <p>Kalendārs ar bērnu pieteiktajām aktivitātēm.</p>
                 </div>
 
-                <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
-                    <a class="btn btn-outline btn-sm" href="?month=<?php echo $prevMonth; ?>&year=<?php echo $prevYear; ?>">
+                <div class="calendar-nav">
+                    <a class="btn btn-outline btn-sm" href="?month=<?= (int)$prevMonth; ?>&year=<?= (int)$prevYear; ?>">
+                        <i class="fas fa-chevron-left"></i>
                         Iepriekšējais
                     </a>
 
-                    <a class="btn btn-primary btn-sm" href="?month=<?php echo date("m"); ?>&year=<?php echo date("Y"); ?>">
+                    <a class="btn btn-primary btn-sm" href="?month=<?= date("m"); ?>&year=<?= date("Y"); ?>">
                         Šodien
                     </a>
 
-                    <a class="btn btn-outline btn-sm" href="?month=<?php echo $nextMonth; ?>&year=<?php echo $nextYear; ?>">
+                    <a class="btn btn-outline btn-sm" href="?month=<?= (int)$nextMonth; ?>&year=<?= (int)$nextYear; ?>">
                         Nākamais
+                        <i class="fas fa-chevron-right"></i>
                     </a>
                 </div>
             </div>
@@ -229,34 +671,34 @@ require __DIR__ . "/../includes/templates/header-parent.php";
 
                 <?php for ($day = 1; $day <= $daysInMonth; $day++): ?>
                     <?php
-                    $dateKey = sprintf("%04d-%02d-%02d", $year, $month, $day);
-                    $dayActivities = $calendarItems[$dateKey] ?? [];
-                    $isToday = ($dateKey === date("Y-m-d"));
+                        $dateKey = sprintf("%04d-%02d-%02d", $year, $month, $day);
+                        $dayActivities = $calendarItems[$dateKey] ?? [];
+                        $isToday = ($dateKey === date("Y-m-d"));
                     ?>
 
-                    <div class="calendar-day <?php echo $isToday ? 'calendar-today' : ''; ?>">
-                        <div class="calendar-date"><?php echo $day; ?></div>
+                    <div class="calendar-day <?= $isToday ? 'calendar-today' : ''; ?>">
+                        <div class="calendar-date"><?= (int)$day; ?></div>
 
                         <?php foreach ($dayActivities as $item): ?>
                             <?php
-                            $isMultiDay = !empty($item["end_date"]) && $item["end_date"] !== $item["start_date"];
+                                $isMultiDay = !empty($item["end_date"]) && $item["end_date"] !== $item["start_date"];
+                                $childName = trim(($item["child_vards"] ?? "") . " " . ($item["child_uzvards"] ?? ""));
                             ?>
-                            <div class="calendar-event <?php echo $isMultiDay ? 'calendar-event-multiday' : ''; ?>">
-                                <strong><?php echo htmlspecialchars($item["title"] ?? "Aktivitāte"); ?></strong>
 
-                                <span>
-                                    <?php echo htmlspecialchars(trim(($item["child_vards"] ?? "") . " " . ($item["child_uzvards"] ?? ""))); ?>
-                                </span>
+                            <div class="calendar-event <?= $isMultiDay ? 'calendar-event-multiday' : ''; ?>">
+                                <strong><?= htmlspecialchars($item["title"] ?? "Aktivitāte"); ?></strong>
+
+                                <span><?= htmlspecialchars($childName ?: "Bērns"); ?></span>
 
                                 <?php if ($isMultiDay): ?>
                                     <small>
-                                        <?php echo htmlspecialchars(formatEventDateRange($item["start_date"], $item["end_date"])); ?>
+                                        <?= htmlspecialchars(formatEventDateRange($item["start_date"], $item["end_date"])); ?>
                                     </small>
                                 <?php endif; ?>
 
                                 <?php if (!empty($item["start_time"])): ?>
                                     <small>
-                                        <?php echo htmlspecialchars(formatEventTimeRange($item["start_time"], $item["end_time"])); ?>
+                                        <?= htmlspecialchars(formatEventTimeRange($item["start_time"], $item["end_time"])); ?>
                                     </small>
                                 <?php endif; ?>
                             </div>
@@ -264,155 +706,84 @@ require __DIR__ . "/../includes/templates/header-parent.php";
                     </div>
                 <?php endfor; ?>
             </div>
-        </div>
+        </section>
 
-        <div class="dashboard-card" style="margin-top:1rem;">
-            <h3>Pieteikto aktivitāšu saraksts</h3>
-            <p class="muted">Detalizēts pārskats par aktivitātēm, kurās bērni ir pieteikti.</p>
+        <section class="activities-list-card">
+            <div class="activities-list-head">
+                <div>
+                    <h2>Pieteikto aktivitāšu saraksts</h2>
+                    <p>Detalizēts pārskats par aktivitātēm, kurās bērni ir pieteikti.</p>
+                </div>
 
-            <div class="divider"></div>
+                <div class="activities-count">
+                    <i class="fas fa-list-check"></i>
+                    Kopā: <?= (int)$activitiesCount; ?>
+                </div>
+            </div>
 
             <?php if (empty($activities)): ?>
-                <p class="muted">Pagaidām bērni nav pieteikti nevienai aktivitātei.</p>
+                <div class="activities-empty">
+                    <h3>Nav pieteiktu aktivitāšu</h3>
+                    <p>Pagaidām bērni nav pieteikti nevienai aktivitātei.</p>
+                </div>
             <?php else: ?>
-                <div class="cards">
+                <div class="activity-list">
                     <?php foreach ($activities as $activity): ?>
-                        <div class="card">
-                            <div class="program-head">
-                                <div>
-                                    <h4 style="margin:0;">
-                                        <?php echo htmlspecialchars($activity["title"] ?? "Aktivitāte"); ?>
-                                    </h4>
+                        <?php
+                            $childName = trim(($activity["child_vards"] ?? "") . " " . ($activity["child_uzvards"] ?? ""));
+                            $timeText = formatEventTimeRange($activity["start_time"], $activity["end_time"]);
+                        ?>
 
-                                    <p class="muted small" style="margin:.3rem 0 0;">
-                                        Bērns:
-                                        <strong>
-                                            <?php echo htmlspecialchars(trim(($activity["child_vards"] ?? "") . " " . ($activity["child_uzvards"] ?? ""))); ?>
-                                        </strong>
-                                    </p>
+                        <article class="activity-card">
+                            <div>
+                                <h3><?= htmlspecialchars($activity["title"] ?? "Aktivitāte"); ?></h3>
 
-                                    <p class="muted small" style="margin:.3rem 0 0;">
-                                        Veids:
-                                        <?php echo htmlspecialchars($activity["event_type"] ?? "pasākums"); ?>
-                                    </p>
+                                <div class="activity-meta">
+                                    <span class="activity-pill">
+                                        <i class="fas fa-child"></i>
+                                        <?= htmlspecialchars($childName ?: "Bērns"); ?>
+                                    </span>
 
-                                    <p class="muted small" style="margin:.3rem 0 0;">
-                                        Datums:
-                                        <?php echo htmlspecialchars(formatEventDateRange($activity["start_date"], $activity["end_date"])); ?>
+                                    <span class="activity-pill">
+                                        <i class="fas fa-tag"></i>
+                                        <?= htmlspecialchars($activity["event_type"] ?? "pasākums"); ?>
+                                    </span>
 
-                                        <?php
-                                        $timeText = formatEventTimeRange($activity["start_time"], $activity["end_time"]);
-                                        if ($timeText !== ""):
-                                        ?>
-                                            <?php echo htmlspecialchars($timeText); ?>
-                                        <?php endif; ?>
-                                    </p>
+                                    <span class="activity-pill">
+                                        <i class="fas fa-calendar-day"></i>
+                                        <?= htmlspecialchars(formatEventDateRange($activity["start_date"], $activity["end_date"])); ?>
+                                    </span>
 
-                                    <p class="muted small" style="margin:.3rem 0 0;">
-                                        Vieta: <?php echo htmlspecialchars($activity["location"] ?? "—"); ?>
-                                    </p>
-
-                                    <p class="muted small" style="margin:.3rem 0 0;">
-                                        Statuss: <?php echo htmlspecialchars($activity["application_status"] ?? "—"); ?>
-                                    </p>
-
-                                    <?php if (!empty($activity["description"])): ?>
-                                        <p class="muted" style="margin:.6rem 0 0;">
-                                            <?php echo htmlspecialchars($activity["description"]); ?>
-                                        </p>
+                                    <?php if ($timeText !== ""): ?>
+                                        <span class="activity-pill">
+                                            <i class="fas fa-clock"></i>
+                                            <?= htmlspecialchars($timeText); ?>
+                                        </span>
                                     <?php endif; ?>
+
+                                    <span class="activity-pill">
+                                        <i class="fas fa-location-dot"></i>
+                                        <?= htmlspecialchars($activity["location"] ?? "—"); ?>
+                                    </span>
                                 </div>
+
+                                <?php if (!empty($activity["description"])): ?>
+                                    <p class="activity-desc">
+                                        <?= htmlspecialchars($activity["description"]); ?>
+                                    </p>
+                                <?php endif; ?>
                             </div>
-                        </div>
+
+                            <span class="badge badge-blue activity-status">
+                                <?= htmlspecialchars($activity["application_status"] ?? "—"); ?>
+                            </span>
+                        </article>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
-        </div>
+        </section>
 
     </div>
 </main>
-
-<style>
-.calendar-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: .6rem;
-}
-
-.calendar-head {
-    font-weight: 800;
-    color: #173f84;
-    text-align: center;
-    padding: .6rem;
-    background: #eef3ff;
-    border-radius: 12px;
-}
-
-.calendar-day {
-    min-height: 125px;
-    background: #fff;
-    border: 1px solid #eef1f6;
-    border-radius: 16px;
-    padding: .65rem;
-    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
-}
-
-.calendar-empty {
-    background: transparent;
-    border: none;
-    box-shadow: none;
-}
-
-.calendar-today {
-    border: 2px solid #f4c430;
-    background: #fffdf3;
-}
-
-.calendar-date {
-    font-weight: 800;
-    color: #173f84;
-    margin-bottom: .45rem;
-}
-
-.calendar-event {
-    background: linear-gradient(135deg, #1e4fa1, #173f84);
-    color: #fff;
-    border-radius: 12px;
-    padding: .45rem .55rem;
-    margin-bottom: .35rem;
-    font-size: .82rem;
-}
-
-.calendar-event-multiday {
-    background: linear-gradient(135deg, #f4c430, #e1aa16);
-    color: #173f84;
-}
-
-.calendar-event strong,
-.calendar-event span,
-.calendar-event small {
-    display: block;
-}
-
-.calendar-event small {
-    opacity: .9;
-    margin-top: .15rem;
-}
-
-@media (max-width: 850px) {
-    .calendar-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .calendar-head,
-    .calendar-empty {
-        display: none;
-    }
-
-    .calendar-day {
-        min-height: auto;
-    }
-}
-</style>
 
 <?php require __DIR__ . "/../includes/templates/footer.php"; ?>

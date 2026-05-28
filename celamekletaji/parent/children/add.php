@@ -4,7 +4,7 @@ session_start();
 $lapa  = "Pievienot bērnu";
 $title = "Pievienot bērnu - Ceļa meklētāji";
 
-require_once __DIR__ . "/../includes/config/database.php";
+require_once __DIR__ . "/../../includes/config/database.php";
 
 /* ===============================
    DROŠĪBA: TIKAI VECĀKIEM
@@ -160,7 +160,7 @@ if ($stmt = $savienojums->prepare($sql)) {
     }
 }
 
-require __DIR__ . "/../includes/templates/header-parent.php";
+require __DIR__ . "/../../includes/templates/header-parent.php";
 ?>
 
 <style>
@@ -572,4 +572,4 @@ require __DIR__ . "/../includes/templates/header-parent.php";
     </div>
 </main>
 
-<?php require __DIR__ . "/../includes/templates/footer.php"; ?>
+<?php require __DIR__ . "/../../includes/templates/footer.php"; ?>
