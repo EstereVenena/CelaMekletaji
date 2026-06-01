@@ -127,6 +127,68 @@ if ($result) {
     margin-top: 2rem;
 }
 
+/* ===============================
+   HERO PHOTO CARD
+================================ */
+
+.hero-photo-card {
+    position: relative;
+    overflow: hidden;
+    min-height: 430px;
+    border-radius: 2rem;
+    background: #173626;
+    box-shadow: 0 28px 70px rgba(0,0,0,0.24);
+    border: 1px solid rgba(255,255,255,0.45);
+}
+
+.hero-photo-card img {
+    width: 100%;
+    height: 100%;
+    min-height: 430px;
+    display: block;
+    object-fit: cover;
+    object-position: center;
+    transform: scale(1.03);
+}
+
+.hero-photo-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(180deg, rgba(16,36,27,0.06), rgba(16,36,27,0.55)),
+        radial-gradient(circle at top left, rgba(244,197,66,0.22), transparent 35%);
+    pointer-events: none;
+}
+
+.hero-photo-caption {
+    position: absolute;
+    left: 1.2rem;
+    right: 1.2rem;
+    bottom: 1.2rem;
+    z-index: 2;
+    padding: 1rem 1.1rem;
+    border-radius: 1.2rem;
+    background: rgba(255,255,255,0.88);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 14px 34px rgba(0,0,0,0.18);
+}
+
+.hero-photo-caption strong {
+    display: block;
+    color: #173626;
+    font-size: 1.1rem;
+    margin-bottom: .25rem;
+}
+
+.hero-photo-caption span {
+    display: block;
+    color: #55645a;
+    line-height: 1.45;
+    font-size: .92rem;
+}
+
+/* Vecā hero card klase paliek, ja citur vēl vajag */
 .hero-card {
     position: relative;
     padding: 2rem;
@@ -172,6 +234,31 @@ if ($result) {
     margin: 0;
     color: #55645a;
     line-height: 1.7;
+}
+
+.hero-card-image {
+    width: 100%;
+    height: 220px;
+    overflow: hidden;
+    margin-bottom: 1.2rem;
+    border-radius: 1.4rem;
+    background: #173626;
+    box-shadow: 0 14px 34px rgba(0,0,0,0.14);
+}
+
+.hero-card-image img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    object-position: center;
+}
+
+@media (max-width: 640px) {
+    .hero-card-image {
+        height: 190px;
+        border-radius: 1.1rem;
+    }
 }
 
 .hero-stats {
@@ -500,8 +587,17 @@ if ($result) {
         grid-template-columns: 1fr;
     }
 
-    .hero-card {
+    .hero-card,
+    .hero-photo-card {
         max-width: 620px;
+    }
+
+    .hero-photo-card {
+        min-height: 360px;
+    }
+
+    .hero-photo-card img {
+        min-height: 360px;
     }
 
     .club-cards {
@@ -529,6 +625,21 @@ if ($result) {
 
     .hero-stats {
         grid-template-columns: 1fr;
+    }
+
+    .hero-photo-card {
+        min-height: 300px;
+        border-radius: 1.5rem;
+    }
+
+    .hero-photo-card img {
+        min-height: 300px;
+    }
+
+    .hero-photo-caption {
+        left: .85rem;
+        right: .85rem;
+        bottom: .85rem;
     }
 
     .section-title-row {
@@ -582,34 +693,42 @@ if ($result) {
                 </div>
             </div>
 
-            <aside class="hero-card">
-                <div class="hero-card-icon">
-                    <i class="fa-solid fa-mountain-sun"></i>
-                </div>
+   <aside class="hero-card">
+    <div class="hero-card-image">
+        <img 
+            src="<?= BASE_URL ?>assets/images/hero/hero.jpg" 
+            alt="Ceļa meklētāju pasākuma dalībnieki"
+        >
+    </div>
 
-                <h3>Vairāk nekā tikai nodarbības</h3>
-                <p>
-                    Nometnes, pārgājieni, praktiski uzdevumi un komandas darbs —
-                    viss vienā kopienā, kur bērni un jaunieši var augt drošā vidē.
-                </p>
+    <div class="hero-card-icon">
+        <i class="fa-solid fa-mountain-sun"></i>
+    </div>
 
-                <div class="hero-stats">
-                    <div class="stat-pill">
-                        <strong><?= count($clubs) ?>+</strong>
-                        <span>klubi</span>
-                    </div>
+    <h3>Vairāk nekā tikai nodarbības</h3>
 
-                    <div class="stat-pill">
-                        <strong><?= count($news) ?>+</strong>
-                        <span>aktualitātes</span>
-                    </div>
+    <p>
+        Nometnes, pārgājieni, praktiski uzdevumi un komandas darbs —
+        viss vienā kopienā, kur bērni un jaunieši var augt drošā vidē.
+    </p>
 
-                    <div class="stat-pill">
-                        <strong>4–16</strong>
-                        <span>gadi</span>
-                    </div>
-                </div>
-            </aside>
+    <div class="hero-stats">
+        <div class="stat-pill">
+            <strong><?= count($clubs) ?>+</strong>
+            <span>klubi</span>
+        </div>
+
+        <div class="stat-pill">
+            <strong><?= count($news) ?>+</strong>
+            <span>aktualitātes</span>
+        </div>
+
+        <div class="stat-pill">
+            <strong>4–16</strong>
+            <span>gadi</span>
+        </div>
+    </div>
+</aside>
         </div>
     </div>
 </section>
