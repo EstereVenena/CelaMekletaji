@@ -393,16 +393,21 @@ require __DIR__ . "/../includes/templates/header-director.php";
                 </p>
 
                 <div class="director-club-actions">
-                    <a class="btn btn-primary btn-sm" href="users.php">
-                        <i class="fas fa-users"></i>
-                        Kluba lietotāji
-                    </a>
+    <a class="btn btn-primary btn-sm" href="club_edit.php">
+        <i class="fas fa-pen-to-square"></i>
+        Labot klubu
+    </a>
 
-                    <a class="btn btn-outline btn-sm" href="../dashboards/director.php">
-                        <i class="fas fa-arrow-left"></i>
-                        Atpakaļ uz paneli
-                    </a>
-                </div>
+    <a class="btn btn-outline btn-sm" href="users.php">
+        <i class="fas fa-users"></i>
+        Kluba lietotāji
+    </a>
+
+    <a class="btn btn-outline btn-sm" href="../dashboards/director.php">
+        <i class="fas fa-arrow-left"></i>
+        Atpakaļ uz paneli
+    </a>
+</div>
             </div>
 
             <aside class="director-club-hero-card">

@@ -196,9 +196,7 @@ $categories = $savienojums->query("
             <div class="gallery-grid">
 
                 <?php foreach ($images as $img): ?>
-                    <?php
-                        $imagePath = "../" . $img['path'];
-                    ?>
+                    $path = __DIR__ . "/../../" . $row['path'];
 
                     <div class="gallery-item">
 

@@ -1,5 +1,5 @@
 <?php
-require_once "../assets/database.php";
+require_once __DIR__ . "/../../includes/config/database.php";
 
 $id = $_GET['id'];
 
