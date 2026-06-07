@@ -1,2 +1,5 @@
 # SFTP configuration with credentials
 .vscode/sftp.json
+
+# Database configuration with credentials
+celamekletaji/includes/config/database.php
