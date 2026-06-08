@@ -60,7 +60,13 @@ $signedActivitiesUrl    = BASE_URL . 'parent/activities.php';
 $availableActivitiesUrl = BASE_URL . 'parent/available-activities.php';
 
 $paymentsUrl            = BASE_URL . 'parent/payments.php';
-$profileUrl             = BASE_URL . 'parent/profile.php';
+
+/*
+   Kopīgais profila fails visām lomām:
+   /4pt/venena/celamekletaji/profile.php
+*/
+$profileUrl             = BASE_URL . 'profile.php';
+
 $logoutUrl              = BASE_URL . 'auth/logout.php';
 $homeUrl                = BASE_URL . 'auth/logout.php?redirect=home';
 ?>
@@ -475,7 +481,7 @@ $homeUrl                = BASE_URL . 'auth/logout.php?redirect=home';
                 <span>Mani bērni</span>
             </a>
 
-                    <a href="<?= $signedActivitiesUrl ?>" class="<?= parentNavActive(['activities.php'], $currentPage) ?>">
+            <a href="<?= $signedActivitiesUrl ?>" class="<?= parentNavActive(['activities.php'], $currentPage) ?>">
                 <i class="fas fa-calendar-check"></i>
                 <span>Pieteiktās aktivitātes</span>
             </a>

@@ -20,6 +20,7 @@ if (
 }
 
 $userId = (int) $_SESSION["lietotajs_id"];
+
 $events = [];
 $success = trim($_GET["success"] ?? "");
 $error   = trim($_GET["error"] ?? "");
@@ -99,25 +100,73 @@ function redirectWithMessage(string $type, string $message): void
     exit();
 }
 
+/* ===============================
+   TABULU PĀRBAUDE
+================================ */
 $eventsTableExists = tableExists($savienojums, "cm_events");
 $appTableExists    = tableExists($savienojums, "cm_event_applications");
+$formsTableExists  = tableExists($savienojums, "cm_participant_forms");
+
+if (!$eventsTableExists) {
+    $error = "Pasākumu tabula cm_events vēl nav izveidota.";
+}
+
+if (!$appTableExists) {
+    $error = "Pasākumu pieteikšanās tabula cm_event_applications vēl nav izveidota.";
+}
+
+/* cm_participant_forms vajag tikai nometnēm */
 
 /* ===============================
-   PIETEIKŠANĀS PASĀKUMAM
+   LIETOTĀJA DATI FORMAS PRIEKŠAIZPILDEI
 ================================ */
-if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["event_id"])) {
-    if (!$eventsTableExists || !$appTableExists) {
-        redirectWithMessage("error", "Pasākumu pieteikšanās tabula vēl nav izveidota.");
+$studentData = [
+    "vards" => "",
+    "uzvards" => ""
+];
+
+$stmt = $savienojums->prepare("
+    SELECT vards, uzvards
+    FROM cm_lietotaji
+    WHERE lietotajs_id = ?
+    LIMIT 1
+");
+
+if ($stmt) {
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+
+    $result = $stmt->get_result();
+    $row = $result->fetch_assoc();
+
+    if ($row) {
+        $studentData["vards"] = $row["vards"] ?? "";
+        $studentData["uzvards"] = $row["uzvards"] ?? "";
     }
 
-    $eventId = (int) $_POST["event_id"];
+    $stmt->close();
+}
+
+/* ===============================
+   VIENKĀRŠA PIETEIKŠANĀS PASĀKUMAM
+   TIKAI PASĀKUMIEM, KAS NAV NOMETNE
+================================ */
+if (
+    $_SERVER["REQUEST_METHOD"] === "POST" &&
+    isset($_POST["simple_event_apply_submit"])
+) {
+    if (!$eventsTableExists || !$appTableExists) {
+        redirectWithMessage("error", "Pieteikšanās nav iespējama, jo nav izveidotas nepieciešamās tabulas.");
+    }
+
+    $eventId = (int)($_POST["event_id"] ?? 0);
 
     if ($eventId <= 0) {
         redirectWithMessage("error", "Nederīgs pasākums.");
     }
 
     $checkSql = "
-        SELECT id, max_participants
+        SELECT id, event_type, max_participants
         FROM cm_events
         WHERE id = ?
           AND is_active = 1
@@ -149,13 +198,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["event_id"])) {
         redirectWithMessage("error", "Pasākums nav atrasts, nav aktīvs vai jau ir beidzies.");
     }
 
-    /* Pārbauda, vai jau aktīvi pieteicies */
+    if (($event["event_type"] ?? "") === "nometne") {
+        redirectWithMessage("error", "Nometnei jāaizpilda dalībnieka anketa.");
+    }
+
+    $applicationId = 0;
+
     $alreadySql = "
-        SELECT id
+        SELECT id, status
         FROM cm_event_applications
         WHERE event_id = ?
           AND child_id = ?
-          AND status = 'pieteikts'
+        ORDER BY id DESC
         LIMIT 1
     ";
 
@@ -169,40 +223,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["event_id"])) {
     $stmt->execute();
 
     $alreadyResult = $stmt->get_result();
-    $alreadyApplied = $alreadyResult->num_rows > 0;
+    $existingApplication = $alreadyResult->fetch_assoc();
 
     $stmt->close();
 
-    if ($alreadyApplied) {
-        redirectWithMessage("error", "Tu jau esi pieteicies šim pasākumam.");
-    }
+    if ($existingApplication) {
+        $applicationId = (int)$existingApplication["id"];
+        $existingStatus = $existingApplication["status"] ?? "";
 
-    /* Ja iepriekš bija atcelts, atjauno esošo pieteikumu */
-    $cancelledSql = "
-        SELECT id
-        FROM cm_event_applications
-        WHERE event_id = ?
-          AND child_id = ?
-          AND status = 'atcelts'
-        LIMIT 1
-    ";
-
-    $stmt = $savienojums->prepare($cancelledSql);
-
-    if (!$stmt) {
-        redirectWithMessage("error", "Neizdevās pārbaudīt atceltu pieteikumu.");
-    }
-
-    $stmt->bind_param("ii", $eventId, $userId);
-    $stmt->execute();
-
-    $cancelledResult = $stmt->get_result();
-    $cancelledApplication = $cancelledResult->fetch_assoc();
-
-    $stmt->close();
-
-    if ($cancelledApplication) {
-        $cancelledApplicationId = (int) $cancelledApplication["id"];
+        if (in_array($existingStatus, ["pieteikts", "apstiprināts"], true)) {
+            redirectWithMessage("error", "Tu jau esi pieteicies šim pasākumam.");
+        }
 
         $restoreSql = "
             UPDATE cm_event_applications
@@ -219,24 +250,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["event_id"])) {
             redirectWithMessage("error", "Neizdevās atjaunot pieteikumu.");
         }
 
-        $stmt->bind_param("ii", $cancelledApplicationId, $userId);
+        $stmt->bind_param("ii", $applicationId, $userId);
 
         if ($stmt->execute()) {
             $stmt->close();
-            redirectWithMessage("success", "Pieteikums pasākumam veiksmīgi atjaunots.");
+            redirectWithMessage("success", "Pieteikšanās pasākumam veiksmīga.");
         }
 
         $stmt->close();
         redirectWithMessage("error", "Neizdevās atjaunot pieteikumu.");
     }
 
-    /* Vietu limita pārbaude */
     if (!empty($event["max_participants"])) {
         $countSql = "
             SELECT COUNT(*) AS total
             FROM cm_event_applications
             WHERE event_id = ?
-              AND status = 'pieteikts'
+              AND status IN ('pieteikts', 'apstiprināts')
         ";
 
         $stmt = $savienojums->prepare($countSql);
@@ -253,7 +283,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["event_id"])) {
 
         $stmt->close();
 
-        if ((int) ($countRow["total"] ?? 0) >= (int) $event["max_participants"]) {
+        if ((int)($countRow["total"] ?? 0) >= (int)$event["max_participants"]) {
             redirectWithMessage("error", "Šim pasākumam vairs nav brīvu vietu.");
         }
     }
@@ -273,18 +303,388 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["event_id"])) {
 
     $stmt->bind_param("ii", $eventId, $userId);
 
-    if ($stmt->execute()) {
+    try {
+        if ($stmt->execute()) {
+            $stmt->close();
+            redirectWithMessage("success", "Pieteikšanās pasākumam veiksmīga.");
+        }
+
         $stmt->close();
-        redirectWithMessage("success", "Pieteikšanās pasākumam veiksmīga.");
+        redirectWithMessage("error", "Neizdevās saglabāt pieteikumu.");
+
+    } catch (Throwable $e) {
+        $stmt->close();
+
+        if ((int)$e->getCode() === 1062) {
+            redirectWithMessage("error", "Tu jau esi pieteicies šim pasākumam.");
+        }
+
+        redirectWithMessage("error", "Neizdevās saglabāt pieteikumu.");
     }
+}
+
+/* ===============================
+   PIETEIKŠANĀS NOMETNEI NO POPUP FORMAS
+================================ */
+if (
+    $_SERVER["REQUEST_METHOD"] === "POST" &&
+    isset($_POST["event_apply_submit"])
+) {
+    if (!$eventsTableExists || !$appTableExists || !$formsTableExists) {
+        redirectWithMessage("error", "Nometnes pieteikšanās nav iespējama, jo nav izveidotas nepieciešamās tabulas.");
+    }
+
+    $eventId = (int)($_POST["event_id"] ?? 0);
+
+    $formData = [
+        "child_first_name"       => trim($_POST["child_first_name"] ?? ""),
+        "child_last_name"        => trim($_POST["child_last_name"] ?? ""),
+        "personal_code"          => trim($_POST["personal_code"] ?? ""),
+        "school"                 => trim($_POST["school"] ?? ""),
+        "declared_address"       => trim($_POST["declared_address"] ?? ""),
+        "actual_address"         => trim($_POST["actual_address"] ?? ""),
+        "parent_phone"           => trim($_POST["parent_phone"] ?? ""),
+        "can_swim"               => trim($_POST["can_swim"] ?? "nē"),
+        "health_problems"        => trim($_POST["health_problems"] ?? ""),
+        "psychological_notes"    => trim($_POST["psychological_notes"] ?? ""),
+        "tick_vaccine"           => trim($_POST["tick_vaccine"] ?? "nē"),
+        "tick_vaccine_date"      => trim($_POST["tick_vaccine_date"] ?? ""),
+        "unwanted_activities"    => trim($_POST["unwanted_activities"] ?? ""),
+        "interests"              => trim($_POST["interests"] ?? ""),
+        "previous_participation" => trim($_POST["previous_participation"] ?? "")
+    ];
+
+    $allowedSwim = ["jā", "nē", "daļēji"];
+    $allowedVaccine = ["jā", "nē"];
+
+    if ($eventId <= 0) {
+        redirectWithMessage("error", "Nederīgs pasākums.");
+    }
+
+    if (
+        $formData["child_first_name"] === "" ||
+        $formData["child_last_name"] === "" ||
+        $formData["personal_code"] === "" ||
+        $formData["school"] === "" ||
+        $formData["declared_address"] === "" ||
+        $formData["actual_address"] === "" ||
+        $formData["parent_phone"] === "" ||
+        $formData["interests"] === "" ||
+        $formData["previous_participation"] === ""
+    ) {
+        redirectWithMessage("error", "Lūdzu aizpildi visus obligātos pieteikuma laukus.");
+    }
+
+    if (!in_array($formData["can_swim"], $allowedSwim, true)) {
+        redirectWithMessage("error", "Nederīga peldēšanas prasmes vērtība.");
+    }
+
+    if (!in_array($formData["tick_vaccine"], $allowedVaccine, true)) {
+        redirectWithMessage("error", "Nederīga ērču vakcīnas vērtība.");
+    }
+
+    if ($formData["tick_vaccine"] === "jā" && $formData["tick_vaccine_date"] === "") {
+        redirectWithMessage("error", "Ja bērns ir vakcinēts pret ērcēm, norādi vakcīnas datumu.");
+    }
+
+    if ($formData["tick_vaccine"] === "nē") {
+        $formData["tick_vaccine_date"] = "";
+    }
+
+    $checkSql = "
+        SELECT id, event_type, max_participants
+        FROM cm_events
+        WHERE id = ?
+          AND is_active = 1
+          AND (
+                start_date >= CURDATE()
+                OR (
+                    end_date IS NOT NULL
+                    AND end_date >= CURDATE()
+                )
+          )
+        LIMIT 1
+    ";
+
+    $stmt = $savienojums->prepare($checkSql);
+
+    if (!$stmt) {
+        redirectWithMessage("error", "Neizdevās pārbaudīt pasākumu.");
+    }
+
+    $stmt->bind_param("i", $eventId);
+    $stmt->execute();
+
+    $eventResult = $stmt->get_result();
+    $event = $eventResult->fetch_assoc();
 
     $stmt->close();
 
-    if ($savienojums->errno === 1062) {
-        redirectWithMessage("error", "Tu jau esi pieteicies šim pasākumam.");
+    if (!$event) {
+        redirectWithMessage("error", "Pasākums nav atrasts, nav aktīvs vai jau ir beidzies.");
     }
 
-    redirectWithMessage("error", "Neizdevās saglabāt pieteikumu.");
+    if (($event["event_type"] ?? "") !== "nometne") {
+        redirectWithMessage("error", "Šāda anketa ir nepieciešama tikai nometnēm.");
+    }
+
+    $applicationId = 0;
+
+    $alreadySql = "
+        SELECT id, status
+        FROM cm_event_applications
+        WHERE event_id = ?
+          AND child_id = ?
+        ORDER BY id DESC
+        LIMIT 1
+    ";
+
+    $stmt = $savienojums->prepare($alreadySql);
+
+    if (!$stmt) {
+        redirectWithMessage("error", "Neizdevās pārbaudīt esošu pieteikumu.");
+    }
+
+    $stmt->bind_param("ii", $eventId, $userId);
+    $stmt->execute();
+
+    $alreadyResult = $stmt->get_result();
+    $existingApplication = $alreadyResult->fetch_assoc();
+
+    $stmt->close();
+
+    if ($existingApplication) {
+        $applicationId = (int)$existingApplication["id"];
+        $existingStatus = $existingApplication["status"] ?? "";
+
+        if (in_array($existingStatus, ["pieteikts", "apstiprināts"], true)) {
+            redirectWithMessage("error", "Tu jau esi pieteicies šim pasākumam.");
+        }
+    }
+
+    if (!empty($event["max_participants"])) {
+        $countSql = "
+            SELECT COUNT(*) AS total
+            FROM cm_event_applications
+            WHERE event_id = ?
+              AND status IN ('pieteikts', 'apstiprināts')
+        ";
+
+        $stmt = $savienojums->prepare($countSql);
+
+        if (!$stmt) {
+            redirectWithMessage("error", "Neizdevās pārbaudīt brīvās vietas.");
+        }
+
+        $stmt->bind_param("i", $eventId);
+        $stmt->execute();
+
+        $countResult = $stmt->get_result();
+        $countRow = $countResult->fetch_assoc();
+
+        $stmt->close();
+
+        if ((int)($countRow["total"] ?? 0) >= (int)$event["max_participants"]) {
+            redirectWithMessage("error", "Šim pasākumam vairs nav brīvu vietu.");
+        }
+    }
+
+    try {
+        $savienojums->begin_transaction();
+
+        if ($applicationId > 0) {
+            $restoreSql = "
+                UPDATE cm_event_applications
+                SET status = 'pieteikts',
+                    applied_at = NOW()
+                WHERE id = ?
+                  AND child_id = ?
+                LIMIT 1
+            ";
+
+            $stmt = $savienojums->prepare($restoreSql);
+
+            if (!$stmt) {
+                throw new Exception("Neizdevās atjaunot pieteikumu.");
+            }
+
+            $stmt->bind_param("ii", $applicationId, $userId);
+            $stmt->execute();
+            $stmt->close();
+        } else {
+            $insertSql = "
+                INSERT INTO cm_event_applications 
+                    (event_id, child_id, status, applied_at)
+                VALUES 
+                    (?, ?, 'pieteikts', NOW())
+            ";
+
+            $stmt = $savienojums->prepare($insertSql);
+
+            if (!$stmt) {
+                throw new Exception("Neizdevās sagatavot pieteikumu.");
+            }
+
+            $stmt->bind_param("ii", $eventId, $userId);
+            $stmt->execute();
+
+            $applicationId = (int)$stmt->insert_id;
+
+            $stmt->close();
+        }
+
+        if ($applicationId <= 0) {
+            throw new Exception("Neizdevās iegūt pieteikuma ID.");
+        }
+
+        $tickDate = $formData["tick_vaccine_date"] !== ""
+            ? $formData["tick_vaccine_date"]
+            : null;
+
+        $formId = 0;
+
+        $stmt = $savienojums->prepare("
+            SELECT id
+            FROM cm_participant_forms
+            WHERE application_id = ?
+            LIMIT 1
+        ");
+
+        if (!$stmt) {
+            throw new Exception("Neizdevās pārbaudīt dalībnieka formu.");
+        }
+
+        $stmt->bind_param("i", $applicationId);
+        $stmt->execute();
+
+        $formResult = $stmt->get_result();
+        $formRow = $formResult->fetch_assoc();
+
+        $stmt->close();
+
+        if ($formRow) {
+            $formId = (int)$formRow["id"];
+
+            $formUpdateSql = "
+                UPDATE cm_participant_forms
+                SET
+                    child_first_name = ?,
+                    child_last_name = ?,
+                    personal_code = ?,
+                    school = ?,
+                    declared_address = ?,
+                    actual_address = ?,
+                    parent_phone = ?,
+                    can_swim = ?,
+                    health_problems = ?,
+                    psychological_notes = ?,
+                    tick_vaccine = ?,
+                    tick_vaccine_date = ?,
+                    unwanted_activities = ?,
+                    interests = ?,
+                    previous_participation = ?,
+                    updated_at = NOW()
+                WHERE id = ?
+                  AND application_id = ?
+            ";
+
+            $stmt = $savienojums->prepare($formUpdateSql);
+
+            if (!$stmt) {
+                throw new Exception("Neizdevās sagatavot dalībnieka formas atjaunināšanu.");
+            }
+
+            $stmt->bind_param(
+                "sssssssssssssssii",
+                $formData["child_first_name"],
+                $formData["child_last_name"],
+                $formData["personal_code"],
+                $formData["school"],
+                $formData["declared_address"],
+                $formData["actual_address"],
+                $formData["parent_phone"],
+                $formData["can_swim"],
+                $formData["health_problems"],
+                $formData["psychological_notes"],
+                $formData["tick_vaccine"],
+                $tickDate,
+                $formData["unwanted_activities"],
+                $formData["interests"],
+                $formData["previous_participation"],
+                $formId,
+                $applicationId
+            );
+
+            $stmt->execute();
+            $stmt->close();
+        } else {
+            $formInsertSql = "
+                INSERT INTO cm_participant_forms
+                    (
+                        application_id,
+                        child_first_name,
+                        child_last_name,
+                        personal_code,
+                        school,
+                        declared_address,
+                        actual_address,
+                        parent_phone,
+                        can_swim,
+                        health_problems,
+                        psychological_notes,
+                        tick_vaccine,
+                        tick_vaccine_date,
+                        unwanted_activities,
+                        interests,
+                        previous_participation
+                    )
+                VALUES
+                    (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ";
+
+            $stmt = $savienojums->prepare($formInsertSql);
+
+            if (!$stmt) {
+                throw new Exception("Neizdevās sagatavot dalībnieka formas saglabāšanu.");
+            }
+
+            $stmt->bind_param(
+                "isssssssssssssss",
+                $applicationId,
+                $formData["child_first_name"],
+                $formData["child_last_name"],
+                $formData["personal_code"],
+                $formData["school"],
+                $formData["declared_address"],
+                $formData["actual_address"],
+                $formData["parent_phone"],
+                $formData["can_swim"],
+                $formData["health_problems"],
+                $formData["psychological_notes"],
+                $formData["tick_vaccine"],
+                $tickDate,
+                $formData["unwanted_activities"],
+                $formData["interests"],
+                $formData["previous_participation"]
+            );
+
+            $stmt->execute();
+            $stmt->close();
+        }
+
+        $savienojums->commit();
+
+        redirectWithMessage("success", "Pieteikšanās nometnei veiksmīga.");
+
+    } catch (Throwable $e) {
+        $savienojums->rollback();
+
+        if ((int)$e->getCode() === 1062) {
+            redirectWithMessage("error", "Tu jau esi pieteicies šim pasākumam.");
+        }
+
+        redirectWithMessage("error", $e->getMessage());
+    }
 }
 
 /* ===============================
@@ -308,15 +708,16 @@ if ($eventsTableExists) {
                     SELECT COUNT(*)
                     FROM cm_event_applications ea
                     WHERE ea.event_id = e.id
-                      AND ea.status = 'pieteikts'
+                      AND ea.status IN ('pieteikts', 'apstiprināts')
                 ) AS applied_count,
                 (
-                    SELECT COUNT(*)
+                    SELECT ea2.status
                     FROM cm_event_applications ea2
                     WHERE ea2.event_id = e.id
                       AND ea2.child_id = ?
-                      AND ea2.status = 'pieteikts'
-                ) AS user_applied
+                    ORDER BY ea2.id DESC
+                    LIMIT 1
+                ) AS user_application_status
             FROM cm_events e
             WHERE e.is_active = 1
               AND (
@@ -359,7 +760,7 @@ if ($eventsTableExists) {
                 event_type,
                 max_participants,
                 0 AS applied_count,
-                0 AS user_applied
+                NULL AS user_application_status
             FROM cm_events
             WHERE is_active = 1
               AND (
@@ -380,8 +781,6 @@ if ($eventsTableExists) {
             $error = "Neizdevās ielādēt pasākumus.";
         }
     }
-} else {
-    $error = "Pasākumu tabula cm_events vēl nav izveidota.";
 }
 
 $eventsCount = count($events);
@@ -701,6 +1100,115 @@ require __DIR__ . "/../includes/templates/header-student.php";
     color: #173f84;
 }
 
+/* ===============================
+   POPUP PIETEIKUMA FORMA
+================================ */
+.apply-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: none;
+}
+
+.apply-modal.open {
+    display: block;
+}
+
+.apply-modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(8, 18, 13, 0.72);
+    backdrop-filter: blur(8px);
+}
+
+.apply-modal-panel {
+    position: relative;
+    z-index: 1;
+    width: min(980px, calc(100% - 1.2rem));
+    max-height: calc(100vh - 1.2rem);
+    overflow-y: auto;
+    margin: .6rem auto;
+    padding: 1.4rem;
+    border-radius: 24px;
+    background: #fff;
+    box-shadow: 0 34px 100px rgba(0,0,0,.35);
+}
+
+.apply-modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 42px;
+    height: 42px;
+    border: none;
+    border-radius: 14px;
+    background: #eef3ff;
+    color: #173f84;
+    cursor: pointer;
+    font-size: 1.05rem;
+}
+
+.apply-modal-panel h2 {
+    margin: 0 3rem .35rem 0;
+    color: #173f84;
+    font-size: 1.55rem;
+}
+
+.apply-modal-subtitle {
+    margin: 0 0 1rem;
+    color: #667085;
+    font-weight: 800;
+}
+
+.apply-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .9rem;
+}
+
+.form-group.full {
+    grid-column: 1 / -1;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: .35rem;
+    font-weight: 800;
+    color: #344054;
+}
+
+.form-control {
+    width: 100%;
+    padding: .85rem .95rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 12px;
+    font-size: .95rem;
+    box-sizing: border-box;
+    background: #fff;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #1e4fa1;
+    box-shadow: 0 0 0 4px rgba(30,79,161,.10);
+}
+
+textarea.form-control {
+    min-height: 95px;
+    resize: vertical;
+}
+
+.apply-modal-actions {
+    display: flex;
+    gap: .8rem;
+    flex-wrap: wrap;
+    margin-top: 1.2rem;
+}
+
+body.modal-lock {
+    overflow: hidden;
+}
+
 @media (max-width: 900px) {
     .events-hero,
     .event-card {
@@ -716,6 +1224,16 @@ require __DIR__ . "/../includes/templates/header-student.php";
     }
 }
 
+@media (max-width: 760px) {
+    .apply-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .apply-modal-panel {
+        border-radius: 18px;
+    }
+}
+
 @media (max-width: 640px) {
     .student-events-page {
         padding: 1.5rem 0 2.5rem;
@@ -727,7 +1245,8 @@ require __DIR__ . "/../includes/templates/header-student.php";
         padding: 1.2rem;
     }
 
-    .events-hero-actions .btn {
+    .events-hero-actions .btn,
+    .apply-modal-actions .btn {
         width: 100%;
     }
 }
@@ -747,6 +1266,7 @@ require __DIR__ . "/../includes/templates/header-student.php";
 
                 <p>
                     Apskati tuvākos pasākumus, seko brīvajām vietām un piesakies dalībai.
+                    Nometnēm jāaizpilda papildu dalībnieka anketa.
                 </p>
 
                 <div class="events-hero-actions">
@@ -803,7 +1323,13 @@ require __DIR__ . "/../includes/templates/header-student.php";
                     <?php foreach ($events as $event): ?>
                         <?php
                             $eventId = (int) ($event["id"] ?? 0);
-                            $alreadyApplied = (int) ($event["user_applied"] ?? 0) > 0;
+                            $eventType = $event["event_type"] ?? "";
+                            $isCamp = $eventType === "nometne";
+
+                            $userApplicationStatus = $event["user_application_status"] ?? "";
+                            $alreadyApplied = in_array($userApplicationStatus, ["pieteikts", "apstiprināts"], true);
+                            $wasCancelled = in_array($userApplicationStatus, ["atteikts", "atcelts", "noraidīts"], true);
+
                             $appliedCount = (int) ($event["applied_count"] ?? 0);
 
                             $maxParticipants = $event["max_participants"] ?? null;
@@ -824,6 +1350,8 @@ require __DIR__ . "/../includes/templates/header-student.php";
                             if (!empty($maxParticipants)) {
                                 $progress = min(100, round(($appliedCount / (int)$maxParticipants) * 100));
                             }
+
+                            $eventTitleForJs = htmlspecialchars($event["title"] ?? "Pasākums", ENT_QUOTES);
                         ?>
 
                         <article class="event-card">
@@ -835,7 +1363,7 @@ require __DIR__ . "/../includes/templates/header-student.php";
                                 <div class="event-meta">
                                     <span class="event-pill">
                                         <i class="fas fa-tag"></i>
-                                        <?= htmlspecialchars($event["event_type"] ?? "Pasākums"); ?>
+                                        <?= htmlspecialchars($eventType ?: "Pasākums"); ?>
                                     </span>
 
                                     <span class="event-pill">
@@ -878,12 +1406,49 @@ require __DIR__ . "/../includes/templates/header-student.php";
                                         Pieteikšanās nav aktivizēta
                                     </div>
 
+                                <?php elseif ($isCamp && !$formsTableExists): ?>
+
+                                    <div class="event-status disabled">
+                                        <i class="fas fa-circle-info"></i>
+                                        Nometnes anketa nav aktivizēta
+                                    </div>
+
                                 <?php elseif ($alreadyApplied): ?>
 
                                     <div class="event-status success">
                                         <i class="fas fa-circle-check"></i>
                                         Jau pieteicies
                                     </div>
+
+                                <?php elseif ($wasCancelled): ?>
+
+                                    <?php if ($isCamp): ?>
+
+                                        <button
+                                            type="button"
+                                            class="btn btn-primary btn-sm"
+                                            onclick="openApplyModal(
+                                                <?= (int)$eventId; ?>,
+                                                '<?= $eventTitleForJs; ?>'
+                                            )"
+                                        >
+                                            <i class="fas fa-rotate-right"></i>
+                                            Pieteikties atkārtoti
+                                        </button>
+
+                                    <?php else: ?>
+
+                                        <form method="POST">
+                                            <input type="hidden" name="simple_event_apply_submit" value="1">
+                                            <input type="hidden" name="event_id" value="<?= (int)$eventId; ?>">
+
+                                            <button type="submit" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-rotate-right"></i>
+                                                Pieteikties atkārtoti
+                                            </button>
+                                        </form>
+
+                                    <?php endif; ?>
 
                                 <?php elseif ($isFull): ?>
 
@@ -892,14 +1457,25 @@ require __DIR__ . "/../includes/templates/header-student.php";
                                         Vietu nav
                                     </div>
 
+                                <?php elseif ($isCamp): ?>
+
+                                    <button
+                                        type="button"
+                                        class="btn btn-primary btn-sm"
+                                        onclick="openApplyModal(
+                                            <?= (int)$eventId; ?>,
+                                            '<?= $eventTitleForJs; ?>'
+                                        )"
+                                    >
+                                        <i class="fas fa-paper-plane"></i>
+                                        Aizpildīt anketu
+                                    </button>
+
                                 <?php else: ?>
 
-                                    <form method="post">
-                                        <input 
-                                            type="hidden" 
-                                            name="event_id" 
-                                            value="<?= $eventId; ?>"
-                                        >
+                                    <form method="POST">
+                                        <input type="hidden" name="simple_event_apply_submit" value="1">
+                                        <input type="hidden" name="event_id" value="<?= (int)$eventId; ?>">
 
                                         <button type="submit" class="btn btn-primary btn-sm">
                                             <i class="fas fa-paper-plane"></i>
@@ -924,5 +1500,235 @@ require __DIR__ . "/../includes/templates/header-student.php";
 
     </div>
 </main>
+
+<!-- ===============================
+     POPUP PIETEIKUMA FORMA NOMETNĒM
+================================ -->
+<div class="apply-modal" id="applyModal" aria-hidden="true">
+    <div class="apply-modal-overlay" onclick="closeApplyModal()"></div>
+
+    <div class="apply-modal-panel">
+        <button type="button" class="apply-modal-close" onclick="closeApplyModal()">
+            <i class="fas fa-xmark"></i>
+        </button>
+
+        <h2>Nometnes pieteikuma anketa</h2>
+        <p id="applyModalEventTitle" class="apply-modal-subtitle"></p>
+
+        <form method="POST" class="apply-form">
+            <input type="hidden" name="event_apply_submit" value="1">
+            <input type="hidden" name="event_id" id="modalEventId">
+
+            <div class="apply-grid">
+
+                <div class="form-group">
+                    <label for="child_first_name">Bērna vārds *</label>
+                    <input
+                        type="text"
+                        id="child_first_name"
+                        name="child_first_name"
+                        class="form-control"
+                        value="<?= htmlspecialchars($studentData["vards"]); ?>"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="child_last_name">Bērna uzvārds *</label>
+                    <input
+                        type="text"
+                        id="child_last_name"
+                        name="child_last_name"
+                        class="form-control"
+                        value="<?= htmlspecialchars($studentData["uzvards"]); ?>"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="personal_code">Personas kods *</label>
+                    <input
+                        type="text"
+                        id="personal_code"
+                        name="personal_code"
+                        class="form-control"
+                        placeholder="000000-00000"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="school">Skola *</label>
+                    <input
+                        type="text"
+                        id="school"
+                        name="school"
+                        class="form-control"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="declared_address">Deklarētā adrese *</label>
+                    <input
+                        type="text"
+                        id="declared_address"
+                        name="declared_address"
+                        class="form-control"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="actual_address">Faktiskā adrese *</label>
+                    <input
+                        type="text"
+                        id="actual_address"
+                        name="actual_address"
+                        class="form-control"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="parent_phone">Vecāka telefons *</label>
+                    <input
+                        type="text"
+                        id="parent_phone"
+                        name="parent_phone"
+                        class="form-control"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="can_swim">Vai prot peldēt? *</label>
+                    <select id="can_swim" name="can_swim" class="form-control" required>
+                        <option value="nē">Nē</option>
+                        <option value="jā">Jā</option>
+                        <option value="daļēji">Daļēji</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="tick_vaccine">Ērču vakcīna *</label>
+                    <select id="tick_vaccine" name="tick_vaccine" class="form-control" required>
+                        <option value="nē">Nē</option>
+                        <option value="jā">Jā</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="tick_vaccine_date">Ērču vakcīnas datums</label>
+                    <input
+                        type="date"
+                        id="tick_vaccine_date"
+                        name="tick_vaccine_date"
+                        class="form-control"
+                    >
+                </div>
+
+                <div class="form-group full">
+                    <label for="health_problems">Veselības problēmas</label>
+                    <textarea
+                        id="health_problems"
+                        name="health_problems"
+                        class="form-control"
+                        placeholder="Ja nav, vari atstāt tukšu."
+                    ></textarea>
+                </div>
+
+                <div class="form-group full">
+                    <label for="psychological_notes">Psiholoģiskas īpatnības / piezīmes</label>
+                    <textarea
+                        id="psychological_notes"
+                        name="psychological_notes"
+                        class="form-control"
+                        placeholder="Ja nav, vari atstāt tukšu."
+                    ></textarea>
+                </div>
+
+                <div class="form-group full">
+                    <label for="unwanted_activities">Aktivitātes, kurās nevēlas piedalīties</label>
+                    <textarea
+                        id="unwanted_activities"
+                        name="unwanted_activities"
+                        class="form-control"
+                        placeholder="Ja tādu nav, vari atstāt tukšu."
+                    ></textarea>
+                </div>
+
+                <div class="form-group full">
+                    <label for="interests">Intereses *</label>
+                    <textarea
+                        id="interests"
+                        name="interests"
+                        class="form-control"
+                        required
+                    ></textarea>
+                </div>
+
+                <div class="form-group full">
+                    <label for="previous_participation">Iepriekšējā dalība *</label>
+                    <textarea
+                        id="previous_participation"
+                        name="previous_participation"
+                        class="form-control"
+                        required
+                    ></textarea>
+                </div>
+
+            </div>
+
+            <div class="apply-modal-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane"></i>
+                    Iesniegt nometnes pieteikumu
+                </button>
+
+                <button type="button" class="btn btn-outline" onclick="closeApplyModal()">
+                    Atcelt
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openApplyModal(eventId, eventTitle) {
+    const modal = document.getElementById("applyModal");
+    const eventIdInput = document.getElementById("modalEventId");
+    const titleBox = document.getElementById("applyModalEventTitle");
+
+    if (!modal || !eventIdInput || !titleBox) {
+        return;
+    }
+
+    eventIdInput.value = eventId;
+    titleBox.textContent = eventTitle;
+
+    modal.classList.add("open");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("modal-lock");
+}
+
+function closeApplyModal() {
+    const modal = document.getElementById("applyModal");
+
+    if (!modal) {
+        return;
+    }
+
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("modal-lock");
+}
+
+document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") {
+        closeApplyModal();
+    }
+});
+</script>
 
 <?php require __DIR__ . "/../includes/templates/footer.php"; ?>

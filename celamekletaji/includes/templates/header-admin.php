@@ -51,7 +51,8 @@ $newsUrl      = BASE_URL . 'admin/news/news.php';
 $clubsUrl     = BASE_URL . 'admin/clubs/clubs.php';
 $galleryUrl   = BASE_URL . 'admin/gallery/gallery.php';
 $usersUrl     = BASE_URL . 'admin/users/users_manage.php';
-$homeUrl = BASE_URL . 'auth/logout.php?redirect=home';
+$profileUrl   = BASE_URL . 'profile.php';
+$homeUrl      = BASE_URL . 'auth/logout.php?redirect=home';
 $logoutUrl    = BASE_URL . 'auth/logout.php';
 ?>
 <!DOCTYPE html>
@@ -479,6 +480,11 @@ $logoutUrl    = BASE_URL . 'auth/logout.php';
                 <a href="<?= $usersUrl ?>">
                     <i class="fas fa-users"></i>
                     Lietotāji
+                </a>
+
+                <a href="<?= $profileUrl ?>">
+                    <i class="fas fa-user-pen"></i>
+                    Profils
                 </a>
 
                 <a href="<?= $logoutUrl ?>" class="danger">

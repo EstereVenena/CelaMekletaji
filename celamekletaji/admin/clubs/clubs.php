@@ -6,18 +6,45 @@ require_once __DIR__ . "/../../includes/config/database.php";
 require_once __DIR__ . "/../../includes/templates/header-admin.php";
 
 $clubs = [];
+$churches = [];
+$directors = [];
+$programs = [];
 
+/* ===============================
+   KLUBI
+================================ */
 $sql = "
     SELECT 
         c.id,
         c.name,
         c.address,
-        GROUP_CONCAT(p.label SEPARATOR ', ') AS programs
+        c.city,
+        c.description,
+        c.image_path,
+        c.director_id,
+        c.church_id,
+        ch.name AS church_name,
+        CONCAT(u.vards, ' ', u.uzvards) AS director_name,
+        GROUP_CONCAT(p.label SEPARATOR ', ') AS programs,
+        GROUP_CONCAT(p.id SEPARATOR ',') AS program_ids
     FROM cm_clubs c
+    LEFT JOIN cm_churches ch ON c.church_id = ch.id
+    LEFT JOIN cm_lietotaji u ON c.director_id = u.lietotajs_id
     LEFT JOIN cm_club_programs cp ON c.id = cp.club_id
     LEFT JOIN cm_programs p ON cp.program_id = p.id
-    GROUP BY c.id, c.name, c.address
-    ORDER BY c.address
+    GROUP BY 
+        c.id,
+        c.name,
+        c.address,
+        c.city,
+        c.description,
+        c.image_path,
+        c.director_id,
+        c.church_id,
+        ch.name,
+        u.vards,
+        u.uzvards
+    ORDER BY c.city ASC, c.name ASC
 ";
 
 $result = $savienojums->query($sql);
@@ -25,6 +52,53 @@ $result = $savienojums->query($sql);
 if ($result) {
     while ($row = $result->fetch_assoc()) {
         $clubs[] = $row;
+    }
+}
+
+/* ===============================
+   DRAUDZES
+================================ */
+$churchResult = $savienojums->query("
+    SELECT id, name
+    FROM cm_churches
+    ORDER BY name ASC
+");
+
+if ($churchResult) {
+    while ($row = $churchResult->fetch_assoc()) {
+        $churches[] = $row;
+    }
+}
+
+/* ===============================
+   DIREKTORI
+================================ */
+$directorResult = $savienojums->query("
+    SELECT
+        d.id,
+        d.name
+    FROM cm_directors d
+    ORDER BY d.name ASC
+");
+
+if ($directorResult) {
+    while ($row = $directorResult->fetch_assoc()) {
+        $directors[] = $row;
+    }
+}
+
+/* ===============================
+   PROGRAMMAS PM / CM
+================================ */
+$programResult = $savienojums->query("
+    SELECT id, label
+    FROM cm_programs
+    ORDER BY id ASC
+");
+
+if ($programResult) {
+    while ($row = $programResult->fetch_assoc()) {
+        $programs[] = $row;
     }
 }
 ?>
@@ -158,7 +232,7 @@ if ($result) {
 
 .admin-clubs-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(295px, 1fr));
     gap: 1rem;
 }
 
@@ -167,7 +241,7 @@ if ($result) {
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    min-height: 250px;
+    min-height: 320px;
     padding: 1.15rem;
     border-radius: 22px;
     background: #f8fbff;
@@ -187,6 +261,27 @@ if ($result) {
     inset: 0 0 auto 0;
     height: 5px;
     background: linear-gradient(90deg, #173f84, #f4c430);
+}
+
+.admin-club-image {
+    width: 100%;
+    height: 155px;
+    object-fit: cover;
+    border-radius: 18px;
+    margin-bottom: 1rem;
+    background: #eef3ff;
+}
+
+.admin-club-image-placeholder {
+    width: 100%;
+    height: 155px;
+    display: grid;
+    place-items: center;
+    border-radius: 18px;
+    margin-bottom: 1rem;
+    background: linear-gradient(135deg, #eef3ff, #fff8df);
+    color: #173f84;
+    font-size: 2rem;
 }
 
 .admin-club-top {
@@ -252,6 +347,13 @@ if ($result) {
     line-height: 1.35;
 }
 
+.admin-club-description {
+    margin-top: .8rem;
+    color: #667085;
+    line-height: 1.55;
+    font-size: .94rem;
+}
+
 .admin-club-actions {
     display: flex;
     gap: .55rem;
@@ -313,8 +415,9 @@ if ($result) {
 
 .club-modal-content {
     position: relative;
-    width: min(520px, 100%);
-    overflow: hidden;
+    width: min(720px, 100%);
+    max-height: calc(100vh - 2rem);
+    overflow: auto;
     border-radius: 26px;
     background: #fff;
     box-shadow: 0 30px 90px rgba(0,0,0,.28);
@@ -384,6 +487,12 @@ if ($result) {
     gap: 1rem;
 }
 
+.club-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .9rem;
+}
+
 .club-form-group {
     display: grid;
     gap: .42rem;
@@ -409,6 +518,29 @@ if ($result) {
 .club-input:focus {
     border-color: #1e4fa1;
     box-shadow: 0 0 0 4px rgba(30,79,161,.12);
+}
+
+.club-program-list {
+    display: grid;
+    gap: .5rem;
+    padding: .85rem;
+    border-radius: 15px;
+    background: #f8fbff;
+    border: 1px solid #edf2fb;
+}
+
+.club-program-option {
+    display: flex;
+    gap: .55rem;
+    align-items: center;
+    color: #344054;
+    font-weight: 850;
+}
+
+.club-program-option input {
+    width: 18px;
+    height: 18px;
+    accent-color: #173f84;
 }
 
 .club-modal-note {
@@ -456,6 +588,10 @@ if ($result) {
         padding: 1.2rem;
     }
 
+    .club-form-grid {
+        grid-template-columns: 1fr;
+    }
+
     .admin-clubs-actions .btn,
     .admin-club-actions .btn,
     .admin-club-actions .btn-red,
@@ -478,7 +614,7 @@ if ($result) {
                 <h1>Klubi</h1>
 
                 <p>
-                    Pārvaldi Ceļa meklētāju klubus, to adreses un piesaistītās programmas.
+                    Pārvaldi Ceļa meklētāju klubus, pilsētu, draudzi, programmas, direktoru, aprakstu un attēlu.
                 </p>
 
                 <div class="admin-clubs-actions">
@@ -512,7 +648,26 @@ if ($result) {
                 <div class="admin-clubs-grid">
 
                     <?php foreach ($clubs as $club): ?>
+                        <?php
+                            $imageSrc = !empty($club["image_path"])
+                                ? "../../" . $club["image_path"]
+                                : "";
+                        ?>
+
                         <article class="admin-club-card">
+
+                            <?php if ($imageSrc): ?>
+                                <img
+                                    src="<?= htmlspecialchars($imageSrc); ?>"
+                                    alt="<?= htmlspecialchars($club["name"] ?? "Kluba attēls"); ?>"
+                                    class="admin-club-image"
+                                >
+                            <?php else: ?>
+                                <div class="admin-club-image-placeholder">
+                                    <i class="fas fa-campground"></i>
+                                </div>
+                            <?php endif; ?>
+
                             <div class="admin-club-top">
                                 <div class="admin-club-icon">
                                     <i class="fas fa-compass"></i>
@@ -520,7 +675,7 @@ if ($result) {
 
                                 <div>
                                     <h3 class="admin-club-title">
-                                        <?= htmlspecialchars($club['name']) ?>
+                                        <?= htmlspecialchars($club['name'] ?? "Bez nosaukuma") ?>
                                     </h3>
 
                                     <div class="admin-club-programs">
@@ -532,20 +687,45 @@ if ($result) {
 
                             <div class="admin-club-meta">
                                 <div class="admin-club-meta-item">
+                                    <i class="fas fa-city"></i>
+                                    <span><?= htmlspecialchars($club['city'] ?: 'Pilsēta nav norādīta') ?></span>
+                                </div>
+
+                                <div class="admin-club-meta-item">
                                     <i class="fas fa-location-dot"></i>
                                     <span><?= htmlspecialchars($club['address'] ?: 'Adrese nav norādīta') ?></span>
                                 </div>
+
+                                <div class="admin-club-meta-item">
+                                    <i class="fas fa-church"></i>
+                                    <span><?= htmlspecialchars($club['church_name'] ?: 'Draudze nav norādīta') ?></span>
+                                </div>
+
+                                <div class="admin-club-meta-item">
+                                    <i class="fas fa-user-tie"></i>
+                                    <span><?= htmlspecialchars(trim($club['director_name'] ?? '') ?: 'Direktors nav norādīts') ?></span>
+                                </div>
                             </div>
+
+                            <?php if (!empty($club["description"])): ?>
+                                <p class="admin-club-description">
+                                    <?= htmlspecialchars(mb_strimwidth($club["description"], 0, 140, "...")); ?>
+                                </p>
+                            <?php endif; ?>
 
                             <div class="admin-club-actions">
                                 <button
                                     type="button"
                                     class="btn btn-outline btn-sm"
-                                    onclick="openEditModal(
-                                        '<?= (int)$club['id'] ?>',
-                                        '<?= htmlspecialchars($club['name'], ENT_QUOTES) ?>',
-                                        '<?= htmlspecialchars($club['address'], ENT_QUOTES) ?>'
-                                    )"
+                                    data-id="<?= (int)$club['id'] ?>"
+                                    data-name="<?= htmlspecialchars($club['name'] ?? '', ENT_QUOTES) ?>"
+                                    data-address="<?= htmlspecialchars($club['address'] ?? '', ENT_QUOTES) ?>"
+                                    data-city="<?= htmlspecialchars($club['city'] ?? '', ENT_QUOTES) ?>"
+                                    data-church="<?= (int)($club['church_id'] ?? 0) ?>"
+                                    data-director="<?= (int)($club['director_id'] ?? 0) ?>"
+                                    data-description="<?= htmlspecialchars($club['description'] ?? '', ENT_QUOTES) ?>"
+                                    data-programs="<?= htmlspecialchars($club['program_ids'] ?? '', ENT_QUOTES) ?>"
+                                    onclick="openEditModal(this)"
                                 >
                                     <i class="fas fa-pen"></i>
                                     Rediģēt
@@ -586,12 +766,12 @@ if ($result) {
 
             <h3 id="modalTitle">Pievienot klubu</h3>
             <p id="modalDescription">
-                Aizpildi kluba nosaukumu un adresi.
+                Aizpildi kluba informāciju.
             </p>
         </div>
 
         <div class="club-modal-body">
-            <form method="POST" action="save_club.php" class="club-form">
+            <form method="POST" action="save_club.php" class="club-form" enctype="multipart/form-data">
 
                 <input type="hidden" name="id" id="club_id">
 
@@ -602,27 +782,115 @@ if ($result) {
                         type="text"
                         name="name"
                         id="name"
-                        placeholder="Piemēram: Grobiņas Ceļa meklētāji"
+                        placeholder="Piemēram: Dobeles klubs"
                         required
                     >
                 </div>
 
+                <div class="club-form-grid">
+                    <div class="club-form-group">
+                        <label for="city">Pilsēta</label>
+                        <input
+                            class="club-input"
+                            type="text"
+                            name="city"
+                            id="city"
+                            placeholder="Piemēram: Dobele"
+                            required
+                        >
+                    </div>
+
+                    <div class="club-form-group">
+                        <label for="address">Adrese</label>
+                        <input
+                            class="club-input"
+                            type="text"
+                            name="address"
+                            id="address"
+                            placeholder="Piemēram: Baznīcas iela 1"
+                        >
+                    </div>
+                </div>
+
+                <div class="club-form-grid">
+                    <div class="club-form-group">
+                        <label for="church_id">Draudze</label>
+                        <select class="club-input" name="church_id" id="church_id">
+                            <option value="">Nav norādīta</option>
+
+                            <?php foreach ($churches as $church): ?>
+                                <option value="<?= (int)$church['id']; ?>">
+                                    <?= htmlspecialchars($church['name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="club-form-group">
+    <label for="director_id">Direktors</label>
+    <select class="club-input" name="director_id" id="director_id">
+        <option value="">Nav norādīts</option>
+
+        <?php foreach ($directors as $director): ?>
+            <option value="<?= (int)$director['id']; ?>">
+                <?= htmlspecialchars($director['name'] ?? 'Direktors'); ?>
+            </option>
+        <?php endforeach; ?>
+    </select>
+</div>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="club-form-group">
-                    <label for="address">Adrese</label>
+                    <label>PM / CM programma</label>
+
+                    <div class="club-program-list">
+                        <?php if (!empty($programs)): ?>
+                            <?php foreach ($programs as $program): ?>
+                                <label class="club-program-option">
+                                    <input
+                                        type="checkbox"
+                                        name="programs[]"
+                                        value="<?= (int)$program['id']; ?>"
+                                        class="program-checkbox"
+                                    >
+                                    <?= htmlspecialchars($program['label']); ?>
+                                </label>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <span class="muted">Nav pievienotu programmu.</span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <div class="club-form-group">
+                    <label for="description">Apraksts</label>
+                    <textarea
+                        class="club-input"
+                        name="description"
+                        id="description"
+                        rows="4"
+                        placeholder="Īss kluba apraksts..."
+                        style="resize: vertical;"
+                    ></textarea>
+                </div>
+
+                <div class="club-form-group">
+                    <label for="image">Kluba attēls</label>
                     <input
                         class="club-input"
-                        type="text"
-                        name="address"
-                        id="address"
-                        placeholder="Piemēram: Lielā iela 12, Grobiņa"
-                        required
+                        type="file"
+                        name="image"
+                        id="image"
+                        accept=".jpg,.jpeg,.png,.webp,.gif,image/*"
                     >
                 </div>
 
                 <div class="club-modal-note">
                     <i class="fas fa-circle-info"></i>
                     <span>
-                        Programmas šajā skatā tikai tiek parādītas. To piesaisti var pievienot vēlāk atsevišķā sadaļā.
+                        Ja rediģējot neizvēlies jaunu attēlu, esošais attēls paliek nemainīts.
                     </span>
                 </div>
 
@@ -646,22 +914,45 @@ if ($result) {
 <script>
 function openAddModal() {
     document.getElementById("modalTitle").innerText = "Pievienot klubu";
-    document.getElementById("modalDescription").innerText = "Aizpildi jaunā kluba nosaukumu un adresi.";
+    document.getElementById("modalDescription").innerText = "Aizpildi jaunā kluba informāciju.";
 
     document.getElementById("club_id").value = "";
     document.getElementById("name").value = "";
     document.getElementById("address").value = "";
+    document.getElementById("city").value = "";
+    document.getElementById("church_id").value = "";
+    document.getElementById("director_id").value = "";
+    document.getElementById("description").value = "";
+    document.getElementById("image").value = "";
+
+    document.querySelectorAll(".program-checkbox").forEach(function (checkbox) {
+        checkbox.checked = false;
+    });
 
     openModal();
 }
 
-function openEditModal(id, name, address) {
+function openEditModal(button) {
     document.getElementById("modalTitle").innerText = "Rediģēt klubu";
-    document.getElementById("modalDescription").innerText = "Atjauno kluba nosaukumu vai adresi.";
+    document.getElementById("modalDescription").innerText = "Atjauno kluba informāciju.";
 
-    document.getElementById("club_id").value = id;
-    document.getElementById("name").value = name;
-    document.getElementById("address").value = address;
+    const programs = (button.dataset.programs || "")
+        .split(",")
+        .map(item => item.trim())
+        .filter(Boolean);
+
+    document.getElementById("club_id").value = button.dataset.id || "";
+    document.getElementById("name").value = button.dataset.name || "";
+    document.getElementById("address").value = button.dataset.address || "";
+    document.getElementById("city").value = button.dataset.city || "";
+    document.getElementById("church_id").value = button.dataset.church || "";
+    document.getElementById("director_id").value = button.dataset.director || "";
+    document.getElementById("description").value = button.dataset.description || "";
+    document.getElementById("image").value = "";
+
+    document.querySelectorAll(".program-checkbox").forEach(function (checkbox) {
+        checkbox.checked = programs.includes(checkbox.value);
+    });
 
     openModal();
 }

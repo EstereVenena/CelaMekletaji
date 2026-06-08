@@ -4,29 +4,73 @@ session_start();
 $lapa  = "Mans profils";
 $title = "Mans profils - Ceļa meklētāji";
 
-require_once __DIR__ . "/../includes/config/database.php";
+require_once __DIR__ . "/includes/config/database.php";
+require_once __DIR__ . "/includes/config/app.php";
 
-if (
-    !isset($_SESSION["lietotajs_id"]) ||
-    !in_array(($_SESSION["loma"] ?? ""), ["Vecāks", "parent"], true)
-) {
-    header("Location: ../auth/login.php");
+/* ===============================
+   DROŠĪBA: TIKAI IELOGOTIEM LIETOTĀJIEM
+================================ */
+if (!isset($_SESSION["lietotajs_id"])) {
+    header("Location: " . BASE_URL . "auth/login.php");
     exit();
 }
 
-$parentId = (int) $_SESSION["lietotajs_id"];
+$userId = (int) $_SESSION["lietotajs_id"];
+$userRoleSession = $_SESSION["loma"] ?? "";
+
 $error = null;
 $success = null;
 
 $user = [
     "lietotajvards" => "",
-    "vards" => "",
-    "uzvards" => "",
-    "epasts" => "",
-    "loma" => "",
-    "statuss" => "",
-    "Reg_datums" => ""
+    "vards"         => "",
+    "uzvards"       => "",
+    "epasts"        => "",
+    "loma"          => "",
+    "statuss"       => "",
+    "Reg_datums"    => ""
 ];
+
+/* ===============================
+   ATPAKAĻ SAITE PĒC LOMAS
+================================ */
+$backUrl = BASE_URL . "index.php";
+$panelName = "sākumlapu";
+
+switch ($userRoleSession) {
+    case "admin":
+    case "Administrators":
+        $backUrl = BASE_URL . "dashboards/admin.php";
+        $panelName = "administratora paneli";
+        break;
+
+    case "Direktors":
+    case "direktors":
+        $backUrl = BASE_URL . "dashboards/director.php";
+        $panelName = "direktora paneli";
+        break;
+
+    case "Skolotājs":
+    case "teacher":
+        $backUrl = BASE_URL . "dashboards/teacher.php";
+        $panelName = "skolotāja paneli";
+        break;
+
+    case "Vecāks":
+    case "parent":
+        $backUrl = BASE_URL . "dashboards/parent.php";
+        $panelName = "vecāku paneli";
+        break;
+
+    case "Ceļameklētājs":
+    case "Skolēns":
+    case "Bērns":
+    case "student":
+    case "child":
+        $backUrl = BASE_URL . "dashboards/student.php";
+        $panelName = "skolēna paneli";
+        break;
+}
 
 /* ===============================
    SAGLABĀ PROFILU
@@ -40,28 +84,47 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $parole2       = trim($_POST["parole2"] ?? "");
 
     if ($lietotajvards === "" || $vards === "" || $uzvards === "" || $epasts === "") {
-        $error = "Lūdzu aizpildiet visus obligātos laukus.";
+
+        $error = "Lūdzu aizpildi visus obligātos laukus.";
+
+    } elseif (!preg_match('/^[a-zA-Z0-9._-]{3,50}$/', $lietotajvards)) {
+
+        $error = "Lietotājvārdam jābūt 3–50 simbolus garam. Drīkst izmantot burtus, ciparus, punktu, domuzīmi un apakšsvītru.";
+
     } elseif (!filter_var($epasts, FILTER_VALIDATE_EMAIL)) {
-        $error = "Lūdzu ievadiet derīgu e-pasta adresi.";
-    } elseif ($parole !== "" && strlen($parole) < 6) {
-        $error = "Jaunajai parolei jābūt vismaz 6 simboliem.";
+
+        $error = "Lūdzu ievadi derīgu e-pasta adresi.";
+
+    } elseif ($parole !== "" && strlen($parole) < 8) {
+
+        $error = "Jaunajai parolei jābūt vismaz 8 simboliem.";
+
     } elseif ($parole !== "" && $parole !== $parole2) {
+
         $error = "Paroles nesakrīt.";
+
     } else {
+
+        /* ===============================
+           PĀRBAUDA LIETOTĀJVĀRDU
+           E-PASTU NEPĀRBAUDA, JO TAS DRĪKST ATKĀRTOTIES
+        ================================ */
         $checkSql = "
-            SELECT lietotajs_id 
-            FROM cm_lietotaji 
-            WHERE lietotajvards = ? 
+            SELECT lietotajs_id
+            FROM cm_lietotaji
+            WHERE lietotajvards = ?
               AND lietotajs_id <> ?
             LIMIT 1
         ";
 
-        if ($stmt = $savienojums->prepare($checkSql)) {
-            $stmt->bind_param("si", $lietotajvards, $parentId);
+        $stmt = $savienojums->prepare($checkSql);
+
+        if ($stmt) {
+            $stmt->bind_param("si", $lietotajvards, $userId);
             $stmt->execute();
             $result = $stmt->get_result();
 
-            if ($result->num_rows > 0) {
+            if ($result && $result->num_rows > 0) {
                 $error = "Šāds lietotājvārds jau eksistē.";
             }
 
@@ -94,7 +157,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         $uzvards,
                         $epasts,
                         $hashedPassword,
-                        $parentId
+                        $userId
                     );
                 }
             } else {
@@ -116,7 +179,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         $vards,
                         $uzvards,
                         $epasts,
-                        $parentId
+                        $userId
                     );
                 }
             }
@@ -141,7 +204,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
    IELĀDĒ PROFILU
 ================================ */
 $sql = "
-    SELECT 
+    SELECT
         lietotajvards,
         vards,
         uzvards,
@@ -154,8 +217,10 @@ $sql = "
     LIMIT 1
 ";
 
-if ($stmt = $savienojums->prepare($sql)) {
-    $stmt->bind_param("i", $parentId);
+$stmt = $savienojums->prepare($sql);
+
+if ($stmt) {
+    $stmt->bind_param("i", $userId);
     $stmt->execute();
 
     $result = $stmt->get_result();
@@ -171,19 +236,71 @@ if ($stmt = $savienojums->prepare($sql)) {
     $error = "Neizdevās sagatavot profila vaicājumu.";
 }
 
+/* ===============================
+   DATI ATTĒLOŠANAI
+================================ */
 $fullName = trim(($user["vards"] ?? "") . " " . ($user["uzvards"] ?? ""));
-$fullName = $fullName !== "" ? $fullName : ($user["lietotajvards"] ?? "Vecāks");
+$fullName = $fullName !== "" ? $fullName : ($user["lietotajvards"] ?? "Lietotājs");
+
 $initials = mb_strtoupper(mb_substr($fullName, 0, 1));
 
 $registered = !empty($user["Reg_datums"])
     ? date("d.m.Y H:i", strtotime($user["Reg_datums"]))
     : "—";
 
-require __DIR__ . "/../includes/templates/header-parent.php";
+$currentRole = $user["loma"] ?: $userRoleSession;
+
+/* ===============================
+   HEADER PĒC LOMAS
+================================ */
+switch ($userRoleSession) {
+    case "admin":
+    case "Administrators":
+        if (file_exists(__DIR__ . "/includes/templates/header-admin.php")) {
+            require __DIR__ . "/includes/templates/header-admin.php";
+        }
+        break;
+
+    case "Direktors":
+    case "direktors":
+        if (file_exists(__DIR__ . "/includes/templates/header-director.php")) {
+            require __DIR__ . "/includes/templates/header-director.php";
+        }
+        break;
+
+    case "Skolotājs":
+    case "teacher":
+        if (file_exists(__DIR__ . "/includes/templates/header-teacher.php")) {
+            require __DIR__ . "/includes/templates/header-teacher.php";
+        } elseif (file_exists(__DIR__ . "/includes/templates/header-parent.php")) {
+            require __DIR__ . "/includes/templates/header-parent.php";
+        }
+        break;
+
+    case "Ceļameklētājs":
+    case "Skolēns":
+    case "Bērns":
+    case "student":
+    case "child":
+        if (file_exists(__DIR__ . "/includes/templates/header-student.php")) {
+            require __DIR__ . "/includes/templates/header-student.php";
+        } elseif (file_exists(__DIR__ . "/includes/templates/header-parent.php")) {
+            require __DIR__ . "/includes/templates/header-parent.php";
+        }
+        break;
+
+    case "Vecāks":
+    case "parent":
+    default:
+        if (file_exists(__DIR__ . "/includes/templates/header-parent.php")) {
+            require __DIR__ . "/includes/templates/header-parent.php";
+        }
+        break;
+}
 ?>
 
 <style>
-.parent-profile-page {
+.profile-page {
     min-height: calc(100vh - 160px);
     padding: 2.4rem 0 3.5rem;
     background:
@@ -416,7 +533,7 @@ require __DIR__ . "/../includes/templates/header-parent.php";
 }
 
 @media (max-width: 640px) {
-    .parent-profile-page {
+    .profile-page {
         padding: 1.5rem 0 2.5rem;
     }
 
@@ -445,7 +562,7 @@ require __DIR__ . "/../includes/templates/header-parent.php";
 }
 </style>
 
-<main class="parent-profile-page">
+<main class="profile-page">
     <div class="container">
 
         <section class="profile-hero">
@@ -456,14 +573,14 @@ require __DIR__ . "/../includes/templates/header-parent.php";
             <div>
                 <h1><?= htmlspecialchars($fullName); ?></h1>
                 <p>
-                    Vecāka profila informācija, kontaktinformācija un paroles maiņa.
+                    Profila informācija, kontaktinformācija un paroles maiņa.
                 </p>
             </div>
 
             <div class="profile-hero-actions">
-                <a href="<?= BASE_URL ?>dashboards/parent.php" class="btn btn-primary btn-sm">
+                <a href="<?= htmlspecialchars($backUrl); ?>" class="btn btn-primary btn-sm">
                     <i class="fas fa-arrow-left"></i>
-                    Atpakaļ uz paneli
+                    Atpakaļ uz <?= htmlspecialchars($panelName); ?>
                 </a>
             </div>
         </section>
@@ -501,7 +618,7 @@ require __DIR__ . "/../includes/templates/header-parent.php";
 
                     <div class="profile-info-row">
                         <span>Loma</span>
-                        <strong><?= htmlspecialchars($user["loma"] ?? "—"); ?></strong>
+                        <strong><?= htmlspecialchars($currentRole ?: "—"); ?></strong>
                     </div>
 
                     <div class="profile-info-row">
@@ -609,7 +726,7 @@ require __DIR__ . "/../includes/templates/header-parent.php";
                             Saglabāt izmaiņas
                         </button>
 
-                        <a href="<?= BASE_URL ?>dashboards/parent.php" class="btn btn-outline">
+                        <a href="<?= htmlspecialchars($backUrl); ?>" class="btn btn-outline">
                             Atcelt
                         </a>
                     </div>
@@ -621,4 +738,8 @@ require __DIR__ . "/../includes/templates/header-parent.php";
     </div>
 </main>
 
-<?php require __DIR__ . "/../includes/templates/footer.php"; ?>
+<?php
+if (file_exists(__DIR__ . "/includes/templates/footer.php")) {
+    require __DIR__ . "/includes/templates/footer.php";
+}
+?>

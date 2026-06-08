@@ -142,20 +142,140 @@ if (
         redirectWithMessage("error", "Nodarbība nav atrasta vai vairs nav aktīva.");
     }
 
-    $alreadySql = "
-        SELECT id
-        FROM cm_lesson_applications
-        WHERE lesson_id = ?
+    /* ===============================
+   PĀRBAUDA, VAI PIETEIKUMS JAU EKSISTĒ
+================================ */
+$alreadySql = "
+    SELECT id, status
+    FROM cm_lesson_applications
+    WHERE lesson_id = ?
+      AND user_id = ?
+    LIMIT 1
+";
+
+$stmt = $savienojums->prepare($alreadySql);
+
+if (!$stmt) {
+    redirectWithMessage("error", "Neizdevās pārbaudīt esošu pieteikumu.");
+}
+
+$stmt->bind_param("ii", $lessonId, $userId);
+$stmt->execute();
+
+$alreadyResult = $stmt->get_result();
+$existingApplication = $alreadyResult->fetch_assoc();
+
+$stmt->close();
+
+if ($existingApplication) {
+    $existingStatus = $existingApplication["status"] ?? "";
+
+    if (in_array($existingStatus, ["pieteikts", "apstiprināts"], true)) {
+        redirectWithMessage("error", "Tu jau esi pieteicies šai nodarbībai.");
+    }
+
+    /*
+       Ja lietotājs agrāk atteicās / tika noraidīts,
+       tad izmantojam esošo ierakstu un atjaunojam statusu.
+    */
+    $updateSql = "
+        UPDATE cm_lesson_applications
+        SET status = 'pieteikts'
+        WHERE id = ?
+          AND lesson_id = ?
           AND user_id = ?
-          AND status = 'pieteikts'
-        LIMIT 1
     ";
 
-    $stmt = $savienojums->prepare($alreadySql);
+    $stmt = $savienojums->prepare($updateSql);
 
     if (!$stmt) {
-        redirectWithMessage("error", "Neizdevās pārbaudīt esošu pieteikumu.");
+        redirectWithMessage("error", "Neizdevās sagatavot atkārtotu pieteikšanos.");
     }
+
+    $existingApplicationId = (int)$existingApplication["id"];
+
+    $stmt->bind_param("iii", $existingApplicationId, $lessonId, $userId);
+
+    if ($stmt->execute()) {
+        $stmt->close();
+        redirectWithMessage("success", "Pieteikšanās veiksmīga.");
+    }
+
+    $stmt->close();
+
+    redirectWithMessage("error", "Neizdevās atjaunot pieteikumu.");
+}
+
+/* ===============================
+   BRĪVO VIETU PĀRBAUDE
+================================ */
+$maxParticipants = $lesson["max_participants"] ?? null;
+
+if (!empty($maxParticipants)) {
+    $countSql = "
+        SELECT COUNT(*) AS total
+        FROM cm_lesson_applications
+        WHERE lesson_id = ?
+          AND status IN ('pieteikts', 'apstiprināts')
+    ";
+
+    $stmt = $savienojums->prepare($countSql);
+
+    if (!$stmt) {
+        redirectWithMessage("error", "Neizdevās pārbaudīt brīvās vietas.");
+    }
+
+    $stmt->bind_param("i", $lessonId);
+    $stmt->execute();
+
+    $countResult = $stmt->get_result();
+    $countRow = $countResult->fetch_assoc();
+
+    $stmt->close();
+
+    $currentCount = (int)($countRow["total"] ?? 0);
+
+    if ($currentCount >= (int)$maxParticipants) {
+        redirectWithMessage("error", "Šai nodarbībai vairs nav brīvu vietu.");
+    }
+}
+
+/* ===============================
+   JAUNS PIETEIKUMS
+================================ */
+$insertSql = "
+    INSERT INTO cm_lesson_applications 
+        (lesson_id, user_id, status)
+    VALUES 
+        (?, ?, 'pieteikts')
+";
+
+$stmt = $savienojums->prepare($insertSql);
+
+if (!$stmt) {
+    redirectWithMessage("error", "Neizdevās sagatavot pieteikuma saglabāšanu.");
+}
+
+$stmt->bind_param("ii", $lessonId, $userId);
+
+try {
+    if ($stmt->execute()) {
+        $stmt->close();
+        redirectWithMessage("success", "Pieteikšanās veiksmīga.");
+    }
+
+    $stmt->close();
+    redirectWithMessage("error", "Neizdevās saglabāt pieteikumu.");
+
+} catch (mysqli_sql_exception $e) {
+    $stmt->close();
+
+    if ((int)$e->getCode() === 1062) {
+        redirectWithMessage("error", "Tu jau esi pieteicies šai nodarbībai.");
+    }
+
+    redirectWithMessage("error", "Neizdevās saglabāt pieteikumu.");
+}
 
     $stmt->bind_param("ii", $lessonId, $userId);
     $stmt->execute();

@@ -28,6 +28,8 @@ $success = trim($_GET["success"] ?? "");
 
 $form = [
     "title" => "",
+    "age_group" => "",
+    "topic" => "",
     "description" => "",
     "lesson_date" => "",
     "lesson_time" => "",
@@ -102,6 +104,15 @@ function formatDateLv(?string $date): string
     return date("d.m.Y", strtotime($date));
 }
 
+function formatDateTimeLv(?string $date): string
+{
+    if (empty($date) || $date === "0000-00-00 00:00:00") {
+        return "—";
+    }
+
+    return date("d.m.Y H:i", strtotime($date));
+}
+
 function formatTimeLv(?string $time): string
 {
     if (empty($time)) {
@@ -119,7 +130,13 @@ function shortText(?string $text, int $limit = 180): string
         return "Apraksts nav pievienots.";
     }
 
-    return mb_strimwidth($text, 0, $limit, "...");
+    if (function_exists("mb_strimwidth")) {
+        return mb_strimwidth($text, 0, $limit, "...");
+    }
+
+    return strlen($text) > $limit
+        ? substr($text, 0, $limit) . "..."
+        : $text;
 }
 
 /* ===============================
@@ -128,6 +145,8 @@ function shortText(?string $text, int $limit = 180): string
 $lessonsTableExists = tableExists($savienojums, "cm_lessons");
 
 $hasTitle       = $lessonsTableExists && tableColumnExists($savienojums, "cm_lessons", "title");
+$hasAgeGroup    = $lessonsTableExists && tableColumnExists($savienojums, "cm_lessons", "age_group");
+$hasTopic       = $lessonsTableExists && tableColumnExists($savienojums, "cm_lessons", "topic");
 $hasDescription = $lessonsTableExists && tableColumnExists($savienojums, "cm_lessons", "description");
 $hasLessonDate  = $lessonsTableExists && tableColumnExists($savienojums, "cm_lessons", "lesson_date");
 $hasLessonTime  = $lessonsTableExists && tableColumnExists($savienojums, "cm_lessons", "lesson_time");
@@ -159,6 +178,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["action"] ?? "") === "toggl
         redirectWithMessage("error", "Nederīgs nodarbības ID.");
     }
 
+    $stmt = null;
+
     if ($hasClubId) {
         $sql = "
             UPDATE cm_lessons
@@ -173,7 +194,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["action"] ?? "") === "toggl
         if ($stmt) {
             $stmt->bind_param("ii", $lessonId, $directorClubId);
         }
-    } else {
+    } elseif ($hasCreatedBy) {
         $sql = "
             UPDATE cm_lessons
             SET is_active = IF(is_active = 1, 0, 1)
@@ -186,6 +207,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["action"] ?? "") === "toggl
 
         if ($stmt) {
             $stmt->bind_param("ii", $lessonId, $directorId);
+        }
+    } else {
+        $sql = "
+            UPDATE cm_lessons
+            SET is_active = IF(is_active = 1, 0, 1)
+            WHERE id = ?
+            LIMIT 1
+        ";
+
+        $stmt = $savienojums->prepare($sql);
+
+        if ($stmt) {
+            $stmt->bind_param("i", $lessonId);
         }
     }
 
@@ -207,6 +241,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["action"] ?? "") === "toggl
 ================================ */
 if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["action"] ?? "") === "create" && empty($error)) {
     $title = trim($_POST["title"] ?? "");
+    $ageGroup = trim($_POST["age_group"] ?? "");
+    $topic = trim($_POST["topic"] ?? "");
     $description = trim($_POST["description"] ?? "");
     $lessonDate = trim($_POST["lesson_date"] ?? "");
     $lessonTime = trim($_POST["lesson_time"] ?? "");
@@ -214,6 +250,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["action"] ?? "") === "creat
 
     $form = [
         "title" => $title,
+        "age_group" => $ageGroup,
+        "topic" => $topic,
         "description" => $description,
         "lesson_date" => $lessonDate,
         "lesson_time" => $lessonTime,
@@ -234,6 +272,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["action"] ?? "") === "creat
             $columns[] = "title";
             $placeholders[] = "?";
             $values[] = $title;
+            $types .= "s";
+        }
+
+        if ($hasAgeGroup) {
+            $columns[] = "age_group";
+            $placeholders[] = "?";
+            $values[] = $ageGroup;
+            $types .= "s";
+        }
+
+        if ($hasTopic) {
+            $columns[] = "topic";
+            $placeholders[] = "?";
+            $values[] = $topic;
             $types .= "s";
         }
 
@@ -327,10 +379,13 @@ if ($lessonsTableExists && empty($error)) {
     $selectParts = [
         "l.id",
         $hasTitle ? "l.title" : "NULL AS title",
+        $hasAgeGroup ? "l.age_group" : "NULL AS age_group",
+        $hasTopic ? "l.topic" : "NULL AS topic",
         $hasDescription ? "l.description" : "NULL AS description",
         $hasLessonDate ? "l.lesson_date" : "NULL AS lesson_date",
         $hasLessonTime ? "l.lesson_time" : "NULL AS lesson_time",
         $hasLocation ? "l.location" : "NULL AS location",
+        $hasClubId ? "l.club_id" : "NULL AS club_id",
         $hasIsActive ? "l.is_active" : "1 AS is_active",
         $hasCreatedAt ? "l.created_at" : "NULL AS created_at",
     ];
@@ -349,9 +404,9 @@ if ($lessonsTableExists && empty($error)) {
         $types .= "i";
     }
 
-    $orderBy = $hasLessonDate
-        ? "ORDER BY l.lesson_date DESC, l.lesson_time DESC"
-        : "ORDER BY l.id DESC";
+    $orderBy = $hasCreatedAt
+        ? "ORDER BY l.created_at DESC, l.id DESC"
+        : ($hasLessonDate ? "ORDER BY l.lesson_date DESC, l.lesson_time DESC" : "ORDER BY l.id DESC");
 
     $sql = "
         SELECT " . implode(", ", $selectParts) . "
@@ -655,6 +710,21 @@ require __DIR__ . "/../includes/templates/header-director.php";
     color: #7a5517;
 }
 
+.director-pill.topic {
+    background: #fff8e6;
+    color: #7a5517;
+}
+
+.director-pill.age {
+    background: #f2f4f7;
+    color: #344054;
+}
+
+.director-pill.created {
+    background: #eef3ff;
+    color: #173f84;
+}
+
 .director-lesson-side {
     width: 170px;
     display: grid;
@@ -729,7 +799,7 @@ require __DIR__ . "/../includes/templates/header-director.php";
 
                 <p>
                     Pievieno un pārskati sava kluba nodarbību plānus.
-                    Šeit var sagatavot nodarbības, kuras skolēni vēlāk varēs redzēt un izmantot pieteikumiem.
+                    Nodarbībām vari norādīt vecuma grupu, tematu, aprakstu, datumu, laiku un vietu.
                 </p>
 
                 <div class="director-lessons-actions">
@@ -786,6 +856,32 @@ require __DIR__ . "/../includes/templates/header-director.php";
                             value="<?= htmlspecialchars($form["title"]); ?>"
                             required
                         >
+                    </div>
+
+                    <div class="director-form-grid">
+                        <div class="director-form-group">
+                            <label for="age_group">Vecuma grupa</label>
+                            <input
+                                class="director-input"
+                                type="text"
+                                id="age_group"
+                                name="age_group"
+                                value="<?= htmlspecialchars($form["age_group"]); ?>"
+                                placeholder="Piemēram: 10–12 gadi"
+                            >
+                        </div>
+
+                        <div class="director-form-group">
+                            <label for="topic">Temats</label>
+                            <input
+                                class="director-input"
+                                type="text"
+                                id="topic"
+                                name="topic"
+                                value="<?= htmlspecialchars($form["topic"]); ?>"
+                                placeholder="Piemēram: Uzticība Dievam"
+                            >
+                        </div>
                     </div>
 
                     <div class="director-form-group">
@@ -857,13 +953,29 @@ require __DIR__ . "/../includes/templates/header-director.php";
                 <?php if (!empty($lessons)): ?>
                     <div class="director-lesson-list">
                         <?php foreach ($lessons as $lesson): ?>
-                            <?php $isActive = ((int)($lesson["is_active"] ?? 1) === 1); ?>
+                            <?php
+                                $isActive = ((int)($lesson["is_active"] ?? 1) === 1);
+                            ?>
 
                             <article class="director-lesson-card">
                                 <div>
                                     <h3><?= htmlspecialchars($lesson["title"] ?? "Bez nosaukuma"); ?></h3>
 
                                     <div class="director-lesson-meta">
+                                        <?php if (!empty($lesson["age_group"])): ?>
+                                            <span class="director-pill age">
+                                                <i class="fas fa-child"></i>
+                                                <?= htmlspecialchars($lesson["age_group"]); ?>
+                                            </span>
+                                        <?php endif; ?>
+
+                                        <?php if (!empty($lesson["topic"])): ?>
+                                            <span class="director-pill topic">
+                                                <i class="fas fa-lightbulb"></i>
+                                                <?= htmlspecialchars($lesson["topic"]); ?>
+                                            </span>
+                                        <?php endif; ?>
+
                                         <span class="director-pill date">
                                             <i class="fas fa-calendar-day"></i>
                                             <?= htmlspecialchars(formatDateLv($lesson["lesson_date"] ?? null)); ?>
@@ -873,6 +985,13 @@ require __DIR__ . "/../includes/templates/header-director.php";
                                             <i class="fas fa-clock"></i>
                                             <?= htmlspecialchars(formatTimeLv($lesson["lesson_time"] ?? null)); ?>
                                         </span>
+
+                                        <?php if (!empty($lesson["created_at"])): ?>
+                                            <span class="director-pill created">
+                                                <i class="fas fa-plus"></i>
+                                                Izveidots: <?= htmlspecialchars(formatDateTimeLv($lesson["created_at"] ?? null)); ?>
+                                            </span>
+                                        <?php endif; ?>
 
                                         <span class="director-pill <?= $isActive ? 'active' : 'inactive'; ?>">
                                             <i class="fas <?= $isActive ? 'fa-circle-check' : 'fa-circle-exclamation'; ?>"></i>
@@ -886,6 +1005,13 @@ require __DIR__ . "/../includes/templates/header-director.php";
                                         <p>
                                             <i class="fas fa-location-dot"></i>
                                             <?= htmlspecialchars($lesson["location"]); ?>
+                                        </p>
+                                    <?php endif; ?>
+
+                                    <?php if (!empty($lesson["club_id"])): ?>
+                                        <p>
+                                            <i class="fas fa-people-roof"></i>
+                                            Klubs ID: <?= (int)$lesson["club_id"]; ?>
                                         </p>
                                     <?php endif; ?>
                                 </div>

@@ -62,6 +62,7 @@ function statusLabel(string $status): string
         "atcelts" => "Atcelts",
         "apstiprināts", "apstiprinats" => "Apstiprināts",
         "atteikts" => "Atteikts",
+        "noraidīts", "noraidits" => "Noraidīts",
         default => ucfirst($status ?: "—"),
     };
 }
@@ -71,8 +72,19 @@ function statusTone(string $status): string
     return match ($status) {
         "pieteikts" => "blue",
         "apstiprināts", "apstiprinats" => "green",
-        "atcelts", "atteikts" => "gold",
+        "atcelts", "atteikts", "noraidīts", "noraidits" => "gold",
         default => "gray",
+    };
+}
+
+function statusIcon(string $status): string
+{
+    return match ($status) {
+        "pieteikts" => "fa-paper-plane",
+        "apstiprināts", "apstiprinats" => "fa-circle-check",
+        "atcelts" => "fa-circle-xmark",
+        "atteikts", "noraidīts", "noraidits" => "fa-ban",
+        default => "fa-circle-info",
     };
 }
 
@@ -121,7 +133,46 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["cancel_lesson_applica
 }
 
 /* ===============================
+   PIETEIKTIES VĒLREIZ
+================================ */
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["reapply_lesson_application_id"])) {
+    $applicationId = (int) $_POST["reapply_lesson_application_id"];
+
+    if ($applicationId <= 0) {
+        redirectWithMessage("error", "Nederīgs pieteikums.");
+    }
+
+    $sql = "
+        UPDATE cm_lesson_applications
+        SET status = 'pieteikts',
+            applied_at = NOW()
+        WHERE id = ?
+          AND user_id = ?
+          AND status IN ('atcelts', 'atteikts', 'noraidīts', 'noraidits')
+        LIMIT 1
+    ";
+
+    $stmt = $savienojums->prepare($sql);
+
+    if (!$stmt) {
+        redirectWithMessage("error", "Neizdevās sagatavot atkārtotu pieteikšanos.");
+    }
+
+    $stmt->bind_param("ii", $applicationId, $userId);
+    $stmt->execute();
+
+    if ($stmt->affected_rows > 0) {
+        $stmt->close();
+        redirectWithMessage("success", "Pieteikšanās veiksmīgi atjaunota.");
+    }
+
+    $stmt->close();
+    redirectWithMessage("error", "Pieteikumu neizdevās atjaunot vai tas jau ir aktīvs.");
+}
+
+/* ===============================
    NODARBĪBU PIETEIKUMI
+   RĀDA VISUS STATUSUS
 ================================ */
 $sql = "
     SELECT
@@ -137,7 +188,6 @@ $sql = "
     FROM cm_lesson_applications la
     INNER JOIN cm_lessons l ON l.id = la.lesson_id
     WHERE la.user_id = ?
-      AND la.status <> 'atcelts'
     ORDER BY la.applied_at DESC, l.lesson_date DESC
 ";
 
@@ -486,7 +536,8 @@ require __DIR__ . "/../includes/templates/header-student.php";
         padding: 1.2rem;
     }
 
-    .applications-hero-actions .btn {
+    .applications-hero-actions .btn,
+    .application-side .btn {
         width: 100%;
     }
 }
@@ -505,7 +556,8 @@ require __DIR__ . "/../includes/templates/header-student.php";
                 <h1>Mani pieteikumi</h1>
 
                 <p>
-                    Šeit redzamas nodarbības, kurām esi pieteicies. Aktīvus pieteikumus vari arī atcelt.
+                    Šeit redzami visi tavi nodarbību pieteikumi — aktīvie, apstiprinātie,
+                    atceltie un atteiktie.
                 </p>
 
                 <div class="applications-hero-actions">
@@ -547,7 +599,9 @@ require __DIR__ . "/../includes/templates/header-student.php";
             <div class="applications-panel-head">
                 <div>
                     <h2>Aktīvie un iepriekšējie pieteikumi</h2>
-                    <p>Atcelšana pieejama tikai pieteikumiem ar statusu “Pieteikts”.</p>
+                    <p>
+                        Aktīvus pieteikumus vari atcelt, bet atceltus vai atteiktus pieteikumus vari iesniegt vēlreiz.
+                    </p>
                 </div>
 
                 <div class="applications-count">
@@ -563,12 +617,19 @@ require __DIR__ . "/../includes/templates/header-student.php";
                         <?php
                             $status = (string) ($app["status"] ?? "");
                             $tone = statusTone($status);
+                            $icon = statusIcon($status);
+
                             $canCancel = $status === "pieteikts";
+                            $canReapply = in_array($status, ["atcelts", "atteikts", "noraidīts", "noraidits"], true);
 
                             $description = trim($app["description"] ?? "");
                             if ($description === "") {
                                 $description = "Apraksts nav pievienots.";
                             }
+
+                            $shortDescription = function_exists("mb_strimwidth")
+                                ? mb_strimwidth($description, 0, 240, "...")
+                                : (strlen($description) > 240 ? substr($description, 0, 240) . "..." : $description);
                         ?>
 
                         <article class="application-card">
@@ -595,13 +656,13 @@ require __DIR__ . "/../includes/templates/header-student.php";
                                 </div>
 
                                 <p class="application-description">
-                                    <?= nl2br(htmlspecialchars(mb_strimwidth($description, 0, 240, "..."))); ?>
+                                    <?= nl2br(htmlspecialchars($shortDescription)); ?>
                                 </p>
                             </div>
 
                             <aside class="application-side">
                                 <div class="application-status <?= htmlspecialchars($tone); ?>">
-                                    <i class="fas fa-circle-check"></i>
+                                    <i class="fas <?= htmlspecialchars($icon); ?>"></i>
                                     <?= htmlspecialchars(statusLabel($status)); ?>
                                 </div>
 
@@ -611,6 +672,7 @@ require __DIR__ . "/../includes/templates/header-student.php";
                                 </div>
 
                                 <?php if ($canCancel): ?>
+
                                     <form method="post" onsubmit="return confirm('Tiešām atcelt šo pieteikumu?');">
                                         <input
                                             type="hidden"
@@ -623,10 +685,28 @@ require __DIR__ . "/../includes/templates/header-student.php";
                                             Atcelt pieteikumu
                                         </button>
                                     </form>
+
+                                <?php elseif ($canReapply): ?>
+
+                                    <form method="post" onsubmit="return confirm('Vai pieteikties vēlreiz?');">
+                                        <input
+                                            type="hidden"
+                                            name="reapply_lesson_application_id"
+                                            value="<?= (int) $app["application_id"]; ?>"
+                                        >
+
+                                        <button class="btn btn-primary btn-sm" type="submit">
+                                            <i class="fas fa-rotate-right"></i>
+                                            Pieteikties vēlreiz
+                                        </button>
+                                    </form>
+
                                 <?php else: ?>
+
                                     <button class="btn btn-outline btn-sm" type="button" disabled>
                                         Nav aktīvs
                                     </button>
+
                                 <?php endif; ?>
                             </aside>
                         </article>

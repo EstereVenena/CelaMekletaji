@@ -37,7 +37,7 @@ $latestUsers = [];
 $latestNews = [];
 
 if ($directorClubId <= 0) {
-    $error = "Direktoram nav piesaistīts klubs. Pārbaudi lietotāja club_id datubāzē.";
+    $error = "Lūdzu, sazinies ar administratoru, lai piešķirtu klubu un redzētu pilnu informāciju.";
 }
 
 /* ===============================

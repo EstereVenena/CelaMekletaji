@@ -91,24 +91,27 @@ function isActivePage(string $path, string $currentUrl): string
             </div>
         <?php endif; ?>
 
-        <!-- NAV -->
-        <nav class="main-nav" id="mainNav" aria-label="Galvenā navigācija">
-            <a class="<?= isActivePage('/index.php', $currentUrl); ?>" href="<?= BASE_URL ?>index.php">
-                Sākums
-            </a>
+      <nav class="main-nav" id="mainNav" aria-label="Galvenā navigācija">
+    <a class="<?= isActivePage('/index.php', $currentUrl); ?>" href="<?= BASE_URL ?>index.php">
+        Sākums
+    </a>
 
-            <a class="<?= isActivePage('/public/about.php', $currentUrl); ?>" href="<?= BASE_URL ?>public/about.php">
-                Par mums
-            </a>
+    <a class="<?= isActivePage('/public/news.php', $currentUrl) || str_contains($currentUrl, '#jaunumi') ? 'active' : ''; ?>" href="<?= BASE_URL ?>public/news.php">
+        Jaunumi
+    </a>
 
-            <a class="<?= isActivePage('/public/gallery.php', $currentUrl); ?>" href="<?= BASE_URL ?>public/gallery.php">
-                Galerija
-            </a>
+    <a class="<?= isActivePage('/public/about.php', $currentUrl); ?>" href="<?= BASE_URL ?>public/about.php">
+        Par mums
+    </a>
 
-            <a class="<?= isActivePage('/public/clubs.php', $currentUrl); ?>" href="<?= BASE_URL ?>public/clubs.php">
-                Klubi
-            </a>
-        </nav>
+    <a class="<?= isActivePage('/public/gallery.php', $currentUrl); ?>" href="<?= BASE_URL ?>public/gallery.php">
+        Galerija
+    </a>
+
+    <a class="<?= isActivePage('/public/clubs.php', $currentUrl); ?>" href="<?= BASE_URL ?>public/clubs.php">
+        Klubi
+    </a>
+</nav>
 
         <!-- RIGHT SIDE -->
         <div class="nav-right">

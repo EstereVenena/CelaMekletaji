@@ -10,10 +10,26 @@ require_once __DIR__ . "/../includes/config/database.php";
 ================================ */
 
 $allowedSorts = [
-    'upload_date' => ['column' => 'upload_date', 'order' => 'DESC', 'label' => 'Jaunākie'],
-    'year'        => ['column' => 'year',        'order' => 'ASC',  'label' => 'Pēc gada'],
-    'creator'     => ['column' => 'creator',     'order' => 'ASC',  'label' => 'Pēc autora'],
-    'category'    => ['column' => 'category',    'order' => 'ASC',  'label' => 'Pēc kategorijas'],
+    'upload_date' => [
+        'column' => 'upload_date',
+        'order'  => 'DESC',
+        'label'  => 'Jaunākie'
+    ],
+    'year' => [
+        'column' => 'year',
+        'order'  => 'ASC',
+        'label'  => 'Pēc gada'
+    ],
+    'creator' => [
+        'column' => 'creator',
+        'order'  => 'ASC',
+        'label'  => 'Pēc autora'
+    ],
+    'category' => [
+        'column' => 'category',
+        'order'  => 'ASC',
+        'label'  => 'Pēc kategorijas'
+    ],
 ];
 
 $sort = $_GET['sort'] ?? 'upload_date';
@@ -26,13 +42,39 @@ $sortColumn = $allowedSorts[$sort]['column'];
 $order      = $allowedSorts[$sort]['order'];
 
 /* ===============================
+   FUNKCIJA ATTĒLA CEĻAM
+================================ */
+
+function galleryImageUrl($path)
+{
+    $path = trim((string)$path);
+
+    if ($path === '') {
+        return '';
+    }
+
+    // Ja datubāzē jau ir pilns URL
+    if (preg_match('/^https?:\/\//i', $path)) {
+        return $path;
+    }
+
+    // Ja BASE_URL nav definēts
+    if (!defined('BASE_URL')) {
+        return '/' . ltrim($path, '/');
+    }
+
+    // Normālais variants
+    return rtrim(BASE_URL, '/') . '/' . ltrim($path, '/');
+}
+
+/* ===============================
    ATTĒLI
 ================================ */
 
 $images = [];
 
 $sql = "
-    SELECT id, filename, path, year, creator, category
+    SELECT id, filename, path, year, creator, category, upload_date
     FROM cm_gallery_images
     ORDER BY $sortColumn $order
 ";
@@ -48,13 +90,13 @@ if ($result) {
 
 <style>
 /* ===============================
-   GALLERY PAGE
+   GALLERY HERO
 ================================ */
 
 .gallery-hero {
     position: relative;
     overflow: hidden;
-    padding: 4.8rem 0 3.8rem;
+    padding: 4rem 0 3rem;
     background:
         radial-gradient(circle at top left, rgba(244, 197, 66, 0.28), transparent 35%),
         radial-gradient(circle at bottom right, rgba(45, 106, 79, 0.45), transparent 42%),
@@ -93,7 +135,7 @@ if ($result) {
 
 .gallery-hero h1 {
     margin: 0;
-    font-size: clamp(2.5rem, 5vw, 4.6rem);
+    font-size: clamp(2.2rem, 5vw, 4.2rem);
     line-height: 1;
     letter-spacing: -0.055em;
 }
@@ -102,11 +144,13 @@ if ($result) {
     max-width: 720px;
     margin: 1.2rem 0 0;
     color: rgba(255,255,255,0.86);
-    font-size: 1.1rem;
-    line-height: 1.75;
+    font-size: 1.05rem;
+    line-height: 1.7;
 }
 
-/* Filter bar */
+/* ===============================
+   TOOLBAR
+================================ */
 
 .gallery-toolbar {
     display: flex;
@@ -114,7 +158,7 @@ if ($result) {
     align-items: center;
     gap: 1rem;
     flex-wrap: wrap;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
     padding: 1rem;
     border-radius: 1.4rem;
     background: #ffffff;
@@ -146,36 +190,38 @@ if ($result) {
     border-color: #173626;
 }
 
-/* Grid */
+/* ===============================
+   MAZĀKS GALERIJAS SKATS
+================================ */
 
 .gallery-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1.15rem;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.9rem;
 }
 
 .gallery-card {
     position: relative;
     overflow: hidden;
-    min-height: 250px;
+    height: 175px;
     padding: 0;
     border: none;
-    border-radius: 1.6rem;
+    border-radius: 1.1rem;
     background: #e9e3d1;
-    box-shadow: 0 16px 45px rgba(0,0,0,0.09);
+    box-shadow: 0 10px 28px rgba(0,0,0,0.08);
     cursor: pointer;
     transition: 0.25s ease;
 }
 
 .gallery-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 28px 70px rgba(0,0,0,0.16);
+    transform: translateY(-4px);
+    box-shadow: 0 18px 42px rgba(0,0,0,0.14);
 }
 
 .gallery-card img {
     width: 100%;
     height: 100%;
-    min-height: 250px;
+    min-height: 0;
     object-fit: cover;
     display: block;
     transition: 0.35s ease;
@@ -192,27 +238,28 @@ if ($result) {
     background:
         linear-gradient(to top, rgba(0,0,0,0.62), transparent 58%);
     opacity: 0.95;
+    pointer-events: none;
 }
 
 .gallery-badge {
     position: absolute;
-    top: 0.9rem;
-    left: 0.9rem;
+    top: 0.65rem;
+    left: 0.65rem;
     z-index: 2;
-    padding: 0.42rem 0.75rem;
+    padding: 0.32rem 0.6rem;
     border-radius: 999px;
     background: rgba(23,54,38,0.9);
     color: #f4c542;
-    font-size: 0.82rem;
+    font-size: 0.75rem;
     font-weight: 900;
     backdrop-filter: blur(8px);
 }
 
 .gallery-meta {
     position: absolute;
-    left: 1rem;
-    right: 1rem;
-    bottom: 1rem;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: 0.75rem;
     z-index: 2;
     color: #fff;
     text-align: left;
@@ -220,14 +267,16 @@ if ($result) {
 
 .gallery-meta strong {
     display: block;
-    font-size: 1rem;
-    margin-bottom: 0.25rem;
+    font-size: 0.9rem;
+    margin-bottom: 0.15rem;
+    line-height: 1.15;
 }
 
 .gallery-meta span {
     display: block;
     color: rgba(255,255,255,0.8);
-    font-size: 0.88rem;
+    font-size: 0.78rem;
+    line-height: 1.2;
 }
 
 .gallery-empty {
@@ -394,17 +443,27 @@ if ($result) {
     display: block;
 }
 
-/* Responsive */
+/* ===============================
+   RESPONSIVE
+================================ */
 
-@media (max-width: 1100px) {
+@media (max-width: 1200px) {
     .gallery-grid {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .gallery-card {
+        height: 165px;
     }
 }
 
-@media (max-width: 820px) {
+@media (max-width: 900px) {
     .gallery-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .gallery-card {
+        height: 150px;
     }
 
     .lightbox-nav {
@@ -413,9 +472,9 @@ if ($result) {
     }
 }
 
-@media (max-width: 560px) {
+@media (max-width: 620px) {
     .gallery-hero {
-        padding: 3.5rem 0 2.8rem;
+        padding: 3.2rem 0 2.5rem;
     }
 
     .gallery-toolbar {
@@ -432,7 +491,32 @@ if ($result) {
     }
 
     .gallery-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+
+    .gallery-card {
+        height: 135px;
+        border-radius: 0.95rem;
+    }
+
+    .gallery-badge {
+        font-size: 0.68rem;
+        padding: 0.28rem 0.52rem;
+    }
+
+    .gallery-meta {
+        left: 0.6rem;
+        right: 0.6rem;
+        bottom: 0.6rem;
+    }
+
+    .gallery-meta strong {
+        font-size: 0.8rem;
+    }
+
+    .gallery-meta span {
+        font-size: 0.7rem;
     }
 
     .lightbox-panel {
@@ -450,6 +534,16 @@ if ($result) {
 
     .lightbox-img {
         max-height: calc(100vh - 240px);
+    }
+}
+
+@media (max-width: 390px) {
+    .gallery-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .gallery-card {
+        height: 150px;
     }
 }
 </style>
@@ -495,44 +589,61 @@ if ($result) {
         </div>
 
         <?php if (!empty($images)): ?>
+
             <div class="gallery-grid" id="galleryGrid">
+
                 <?php foreach ($images as $img): ?>
                     <?php
-                        $year     = htmlspecialchars($img['year'] ?? '');
-                        $creator  = htmlspecialchars($img['creator'] ?? 'Nezināms autors');
-                        $category = htmlspecialchars($img['category'] ?? 'Bez kategorijas');
-                        $filename = htmlspecialchars($img['filename'] ?? 'Galerijas attēls');
-                        $path     = htmlspecialchars($img['path'] ?? '');
+                        $yearRaw     = $img['year'] ?? '';
+                        $creatorRaw  = $img['creator'] ?? 'Nezināms autors';
+                        $categoryRaw = $img['category'] ?? 'Bez kategorijas';
+                        $filenameRaw = $img['filename'] ?? 'Galerijas attēls';
 
-                        $caption = trim(($img['year'] ?? '') . ' - ' . ($img['creator'] ?? '') . ' (' . ($img['category'] ?? '') . ')');
+                        $imageUrlRaw = galleryImageUrl($img['path'] ?? '');
+
+                        $year     = htmlspecialchars($yearRaw);
+                        $creator  = htmlspecialchars($creatorRaw);
+                        $category = htmlspecialchars($categoryRaw);
+                        $filename = htmlspecialchars($filenameRaw);
+                        $imageUrl = htmlspecialchars($imageUrlRaw);
+
+                        $captionRaw = trim($yearRaw . ' - ' . $creatorRaw . ' (' . $categoryRaw . ')');
+                        $caption    = htmlspecialchars($captionRaw);
                     ?>
 
-                    <button
-                        class="gallery-card"
-                        type="button"
-                        data-full="<?= $path; ?>"
-                        data-caption="<?= htmlspecialchars($caption); ?>"
-                    >
-                        <img src="<?= $path; ?>" alt="<?= $filename; ?>">
+                    <?php if ($imageUrlRaw !== ''): ?>
+                        <button
+                            class="gallery-card"
+                            type="button"
+                            data-full="<?= $imageUrl; ?>"
+                            data-caption="<?= $caption; ?>"
+                        >
+                            <img src="<?= $imageUrl; ?>" alt="<?= $filename; ?>" loading="lazy">
 
-                        <?php if ($year !== ''): ?>
-                            <span class="gallery-badge"><?= $year; ?></span>
-                        <?php endif; ?>
+                            <?php if ($year !== ''): ?>
+                                <span class="gallery-badge"><?= $year; ?></span>
+                            <?php endif; ?>
 
-                        <span class="gallery-meta">
-                            <strong><?= $category; ?></strong>
-                            <span><?= $creator; ?></span>
-                        </span>
-                    </button>
+                            <span class="gallery-meta">
+                                <strong><?= $category; ?></strong>
+                                <span><?= $creator; ?></span>
+                            </span>
+                        </button>
+                    <?php endif; ?>
+
                 <?php endforeach; ?>
+
             </div>
+
         <?php else: ?>
+
             <div class="gallery-empty">
                 <h3>Galerijā vēl nav attēlu</h3>
                 <p class="muted">
                     Kad tiks pievienoti attēli, tie parādīsies šajā sadaļā.
                 </p>
             </div>
+
         <?php endif; ?>
 
     </div>

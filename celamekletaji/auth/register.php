@@ -6,58 +6,69 @@ $veiksmigi = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
-    $vards   = trim($_POST["vards"] ?? "");
-    $uzvards = trim($_POST["uzvards"] ?? "");
-    $epasts  = trim($_POST["epasts"] ?? "");
-    $parole1 = $_POST["parole"] ?? "";
-    $parole2 = $_POST["parole2"] ?? "";
+    $lietotajvards = trim($_POST["lietotajvards"] ?? "");
+    $vards         = trim($_POST["vards"] ?? "");
+    $uzvards       = trim($_POST["uzvards"] ?? "");
+    $epasts        = trim($_POST["epasts"] ?? "");
+    $parole1       = $_POST["parole"] ?? "";
+    $parole2       = $_POST["parole2"] ?? "";
 
-    if (!$vards || !$uzvards || !$epasts || !$parole1 || !$parole2) {
-        $kluda = "Aizpildi visus laukus";
+    if (!$lietotajvards || !$vards || !$uzvards || !$epasts || !$parole1 || !$parole2) {
+
+        $kluda = "Aizpildi visus laukus.";
+
+    } elseif (!preg_match('/^[a-zA-Z0-9._-]{3,50}$/', $lietotajvards)) {
+
+        $kluda = "Lietotājvārdam jābūt 3–50 simbolus garam. Drīkst izmantot burtus, ciparus, punktu, domuzīmi un apakšsvītru.";
+
     } elseif (!filter_var($epasts, FILTER_VALIDATE_EMAIL)) {
-        $kluda = "Nederīgs e-pasta formāts";
+
+        $kluda = "Nederīgs e-pasta formāts.";
+
     } elseif ($parole1 !== $parole2) {
-        $kluda = "Paroles nesakrīt";
+
+        $kluda = "Paroles nesakrīt.";
+
     } elseif (strlen($parole1) < 8) {
-        $kluda = "Parolei jābūt vismaz 8 simbolus garai";
+
+        $kluda = "Parolei jābūt vismaz 8 simbolus garai.";
+
     } else {
 
-        // Lietotājvārds no e-pasta
-        $base = explode("@", $epasts)[0];
-        $lietotajvards = $base;
-        $i = 1;
+        $stmt = $savienojums->prepare("
+            SELECT lietotajs_id
+            FROM cm_lietotaji
+            WHERE lietotajvards = ?
+            LIMIT 1
+        ");
 
-        // Nodrošina unikālu lietotājvārdu
-        while (true) {
-            $stmt = $savienojums->prepare(
-                "SELECT 1 FROM cm_lietotaji WHERE lietotajvards = ? LIMIT 1"
-            );
-            $stmt->bind_param("s", $lietotajvards);
-            $stmt->execute();
-            if ($stmt->get_result()->num_rows === 0) {
-                break;
-            }
-            $lietotajvards = $base . $i++;
+        if (!$stmt) {
+            die("Kļūda sagatavojot lietotājvārda pārbaudi: " . $savienojums->error);
         }
 
-        // Pārbauda e-pastu
-        $stmt = $savienojums->prepare(
-            "SELECT 1 FROM cm_lietotaji WHERE epasts = ? LIMIT 1"
-        );
-        $stmt->bind_param("s", $epasts);
+        $stmt->bind_param("s", $lietotajvards);
         $stmt->execute();
+        $rez = $stmt->get_result();
 
-        if ($stmt->get_result()->num_rows > 0) {
-            $kluda = "Lietotājs ar šādu e-pastu jau eksistē";
+        if ($rez && $rez->num_rows > 0) {
+
+            $kluda = "Šāds lietotājvārds jau eksistē.";
+
         } else {
+
+            $stmt->close();
 
             $hash = password_hash($parole1, PASSWORD_DEFAULT);
 
             $stmt = $savienojums->prepare("
                 INSERT INTO cm_lietotaji
-                (lietotajvards, vards, uzvards, epasts, parole, loma, statuss)
-                VALUES (?, ?, ?, ?, ?, 'Vecāks', 'gaida')
+                (lietotajvards, vards, uzvards, epasts, parole, loma_id, loma, statuss)
+                VALUES (?, ?, ?, ?, ?, 6, 'Nenoteikts', 'gaida')
             ");
+
+            if (!$stmt) {
+                die("Kļūda sagatavojot reģistrāciju: " . $savienojums->error);
+            }
 
             $stmt->bind_param(
                 "sssss",
@@ -69,10 +80,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             );
 
             if ($stmt->execute()) {
-                $veiksmigi = "Reģistrācija veiksmīga! Pagaidi administratora apstiprinājumu.";
+                $veiksmigi = "Reģistrācija veiksmīga!<br>Gaidi administratora apstiprinājumu.";
+                $_POST = [];
             } else {
-                $kluda = "Kļūda reģistrējot lietotāju";
+                $kluda = "Kļūda reģistrējot lietotāju.";
             }
+        }
+
+        if (isset($stmt) && $stmt) {
+            $stmt->close();
         }
     }
 }
@@ -86,6 +102,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>
+
 <main class="auth-page">
     <div class="auth-card">
 
@@ -98,19 +115,54 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         </div>
 
         <?php if ($kluda): ?>
-            <div class="error"><?= htmlspecialchars($kluda) ?></div>
+            <div class="error">
+                <?= htmlspecialchars($kluda) ?>
+            </div>
         <?php endif; ?>
 
         <?php if ($veiksmigi): ?>
-            <div class="success"><?= htmlspecialchars($veiksmigi) ?></div>
+            <div class="success">
+                <?= $veiksmigi ?>
+            </div>
         <?php endif; ?>
 
         <form method="POST" class="auth-form">
 
-            <input type="text" name="vards" placeholder="Vārds" required>
-            <input type="text" name="uzvards" placeholder="Uzvārds" required>
+            <input
+                type="text"
+                name="lietotajvards"
+                placeholder="Lietotājvārds"
+                required
+                autocomplete="username"
+                value="<?= htmlspecialchars($_POST['lietotajvards'] ?? '') ?>"
+            >
 
-            <input type="email" name="epasts" placeholder="E-pasts" required>
+            <input
+                type="text"
+                name="vards"
+                placeholder="Vārds"
+                required
+                autocomplete="given-name"
+                value="<?= htmlspecialchars($_POST['vards'] ?? '') ?>"
+            >
+
+            <input
+                type="text"
+                name="uzvards"
+                placeholder="Uzvārds"
+                required
+                autocomplete="family-name"
+                value="<?= htmlspecialchars($_POST['uzvards'] ?? '') ?>"
+            >
+
+            <input
+                type="email"
+                name="epasts"
+                placeholder="E-pasts"
+                required
+                autocomplete="email"
+                value="<?= htmlspecialchars($_POST['epasts'] ?? '') ?>"
+            >
 
             <div style="position:relative;">
                 <input
@@ -119,9 +171,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     placeholder="Parole"
                     required
                     id="parole1"
+                    autocomplete="new-password"
                 >
-                <span class="eye" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1.2rem;">👁</span>
+                <span class="eye" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1.2rem;">
+                    👁
+                </span>
             </div>
+
             <div style="position:relative;">
                 <input
                     type="password"
@@ -129,8 +185,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     placeholder="Atkārtot paroli"
                     required
                     id="parole2"
+                    autocomplete="new-password"
                 >
-                <span class="eye" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1.2rem;">👁</span>
+                <span class="eye" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1.2rem;">
+                    👁
+                </span>
             </div>
 
             <button type="submit" class="btn btn-primary">
@@ -150,12 +209,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     </div>
 </main>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const eyes = document.querySelectorAll('.eye');
+
     eyes.forEach(eye => {
         eye.addEventListener('click', function() {
             const pwd = this.previousElementSibling;
+
+            if (!pwd) {
+                return;
+            }
+
             if (pwd.type === 'password') {
                 pwd.type = 'text';
                 this.textContent = '🙈';
@@ -167,5 +233,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
 </body>
 </html>

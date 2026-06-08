@@ -10,7 +10,7 @@ require_once __DIR__ . "/includes/config/database.php";
 ================================ */
 $news = [];
 $newsSql = "
-    SELECT id, title, description, category, publish_date
+    SELECT id, title, description, category, publish_date, image
     FROM cm_news
     WHERE is_active = 1
     ORDER BY publish_date DESC
@@ -338,6 +338,24 @@ if ($result) {
     box-shadow: 0 18px 55px rgba(0,0,0,0.08);
 }
 
+.news-image {
+    width: 100%;
+    height: 210px;
+    overflow: hidden;
+    border-radius: 1.35rem;
+    margin-bottom: 1.2rem;
+    background: #173626;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.10);
+}
+
+.news-image img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    object-position: center;
+}
+
 .news-meta {
     display: flex;
     align-items: center;
@@ -661,6 +679,11 @@ if ($result) {
         padding: 1.5rem;
         border-radius: 1.5rem;
     }
+
+    .news-image {
+        height: 165px;
+        border-radius: 1.1rem;
+    }
 }
 </style>
 
@@ -693,42 +716,42 @@ if ($result) {
                 </div>
             </div>
 
-   <aside class="hero-card">
-    <div class="hero-card-image">
-        <img 
-            src="<?= BASE_URL ?>assets/images/hero/hero.jpg" 
-            alt="Ceļa meklētāju pasākuma dalībnieki"
-        >
-    </div>
+            <aside class="hero-card">
+                <div class="hero-card-image">
+                    <img 
+                        src="<?= BASE_URL ?>assets/images/hero/hero.jpg" 
+                        alt="Ceļa meklētāju pasākuma dalībnieki"
+                    >
+                </div>
 
-    <div class="hero-card-icon">
-        <i class="fa-solid fa-mountain-sun"></i>
-    </div>
+                <div class="hero-card-icon">
+                    <i class="fa-solid fa-mountain-sun"></i>
+                </div>
 
-    <h3>Vairāk nekā tikai nodarbības</h3>
+                <h3>Vairāk nekā tikai nodarbības</h3>
 
-    <p>
-        Nometnes, pārgājieni, praktiski uzdevumi un komandas darbs —
-        viss vienā kopienā, kur bērni un jaunieši var augt drošā vidē.
-    </p>
+                <p>
+                    Nometnes, pārgājieni, praktiski uzdevumi un komandas darbs —
+                    viss vienā kopienā, kur bērni un jaunieši var augt drošā vidē.
+                </p>
 
-    <div class="hero-stats">
-        <div class="stat-pill">
-            <strong><?= count($clubs) ?>+</strong>
-            <span>klubi</span>
-        </div>
+                <div class="hero-stats">
+                    <div class="stat-pill">
+                        <strong><?= count($clubs) ?>+</strong>
+                        <span>klubi</span>
+                    </div>
 
-        <div class="stat-pill">
-            <strong><?= count($news) ?>+</strong>
-            <span>aktualitātes</span>
-        </div>
+                    <div class="stat-pill">
+                        <strong><?= count($news) ?>+</strong>
+                        <span>aktualitātes</span>
+                    </div>
 
-        <div class="stat-pill">
-            <strong>4–16</strong>
-            <span>gadi</span>
-        </div>
-    </div>
-</aside>
+                    <div class="stat-pill">
+                        <strong>4–16</strong>
+                        <span>gadi</span>
+                    </div>
+                </div>
+            </aside>
         </div>
     </div>
 </section>
@@ -757,21 +780,34 @@ if ($result) {
                             <article class="carousel-slide">
                                 <div class="news-card">
                                     <div>
+                                        <?php if (!empty($item['image'])): ?>
+                                            <div class="news-image">
+                                                <img
+                                                    src="<?= BASE_URL . htmlspecialchars($item['image']) ?>"
+                                                    alt="<?= htmlspecialchars($item['title']) ?>"
+                                                >
+                                            </div>
+                                        <?php endif; ?>
+
                                         <div class="news-meta">
                                             <span class="news-tag">
-                                                <?= htmlspecialchars($item['category']) ?>
+                                                <?= htmlspecialchars($item['category'] ?: 'Jaunums') ?>
                                             </span>
 
                                             <span class="news-date">
                                                 <i class="fa-regular fa-calendar"></i>
-                                                <?= htmlspecialchars(date('d.m.Y', strtotime($item['publish_date']))) ?>
+                                                <?php if (!empty($item['publish_date'])): ?>
+                                                    <?= htmlspecialchars(date('d.m.Y', strtotime($item['publish_date']))) ?>
+                                                <?php else: ?>
+                                                    —
+                                                <?php endif; ?>
                                             </span>
                                         </div>
 
                                         <h3><?= htmlspecialchars($item['title']) ?></h3>
 
                                         <p class="muted">
-                                            <?= htmlspecialchars(mb_strimwidth($item['description'], 0, 190, '...')) ?>
+                                            <?= htmlspecialchars(mb_strimwidth(strip_tags($item['description'] ?? ''), 0, 190, '...')) ?>
                                         </p>
                                     </div>
 

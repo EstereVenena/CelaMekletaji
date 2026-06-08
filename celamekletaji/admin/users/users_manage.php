@@ -4,7 +4,6 @@ session_start();
 $lapa  = "Lietotāju pārvaldība";
 $title = "Lietotāju pārvaldība";
 
-require __DIR__ . "/../../includes/templates/header-admin.php";
 require_once __DIR__ . "/../../includes/config/database.php";
 
 // Drošība — tikai adminam
@@ -13,8 +12,44 @@ if (!isset($_SESSION["lietotajs_id"]) || ($_SESSION["loma"] ?? "") !== "admin") 
     exit();
 }
 
-$success = "";
-$error   = "";
+/* ===============================
+   ZIŅOJUMI PĒC PĀRADRESĀCIJAS
+================================ */
+$success = $_SESSION["flash_success"] ?? "";
+$error   = $_SESSION["flash_error"] ?? "";
+
+unset($_SESSION["flash_success"], $_SESSION["flash_error"]);
+
+/* ===============================
+   PIEEJAMIE STATUSI UN LOMAS
+================================ */
+$availableStatuses = ["aktīvs", "gaida", "bloķēts", "dzēsts"];
+
+$availableRoles = [
+    "admin"          => 1,
+    "Vecāks"         => 2,
+    "Direktors"      => 3,
+    "Skolotājs"      => 4,
+    "Ceļameklētājs"  => 5,
+    "Nenoteikts"     => 6,
+    "Skolēns"        => 7
+];
+
+/* ===============================
+   PĀRADRESĀCIJA ATPAKAĻ UZ SARAKSTU
+================================ */
+function redirectBackToUsersManage()
+{
+    $query = $_GET;
+
+    if (!empty($query)) {
+        header("Location: users_manage.php?" . http_build_query($query));
+    } else {
+        header("Location: users_manage.php");
+    }
+
+    exit();
+}
 
 /* ===============================
    DZĒŠANA
@@ -24,23 +59,122 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["delete_user_id"])) {
     $currentUserId = (int)($_SESSION["lietotajs_id"] ?? 0);
 
     if ($deleteId === $currentUserId) {
-        $error = "Tu nevari dzēst pats savu kontu.";
-    } else {
-        $stmt = $savienojums->prepare("DELETE FROM cm_lietotaji WHERE lietotajs_id = ?");
-        if ($stmt) {
-            $stmt->bind_param("i", $deleteId);
-
-            if ($stmt->execute()) {
-                $success = "Lietotājs veiksmīgi dzēsts.";
-            } else {
-                $error = "Neizdevās dzēst lietotāju.";
-            }
-
-            $stmt->close();
-        } else {
-            $error = "Neizdevās sagatavot dzēšanas vaicājumu.";
-        }
+        $_SESSION["flash_error"] = "Tu nevari dzēst pats savu kontu.";
+        redirectBackToUsersManage();
     }
+
+    $stmt = $savienojums->prepare("
+        DELETE FROM cm_lietotaji
+        WHERE lietotajs_id = ?
+    ");
+
+    if ($stmt) {
+        $stmt->bind_param("i", $deleteId);
+
+        if ($stmt->execute()) {
+            $_SESSION["flash_success"] = "Lietotājs veiksmīgi dzēsts.";
+        } else {
+            $_SESSION["flash_error"] = "Neizdevās dzēst lietotāju.";
+        }
+
+        $stmt->close();
+    } else {
+        $_SESSION["flash_error"] = "Neizdevās sagatavot dzēšanas vaicājumu.";
+    }
+
+    redirectBackToUsersManage();
+}
+
+/* ===============================
+   ĀTRĀ STATUSA MAIŅA
+================================ */
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["quick_status_user_id"], $_POST["quick_status"])) {
+    $quickUserId = (int)$_POST["quick_status_user_id"];
+    $quickStatus = trim($_POST["quick_status"]);
+
+    if ($quickUserId <= 0) {
+        $_SESSION["flash_error"] = "Nederīgs lietotāja ID.";
+        redirectBackToUsersManage();
+    }
+
+    if (!in_array($quickStatus, $availableStatuses, true)) {
+        $_SESSION["flash_error"] = "Nederīgs statuss.";
+        redirectBackToUsersManage();
+    }
+
+    $stmt = $savienojums->prepare("
+        UPDATE cm_lietotaji
+        SET statuss = ?
+        WHERE lietotajs_id = ?
+    ");
+
+    if ($stmt) {
+        $stmt->bind_param("si", $quickStatus, $quickUserId);
+
+        if ($stmt->execute()) {
+            $_SESSION["flash_success"] = "Lietotāja statuss veiksmīgi mainīts.";
+        } else {
+            $_SESSION["flash_error"] = "Neizdevās mainīt lietotāja statusu.";
+        }
+
+        $stmt->close();
+    } else {
+        $_SESSION["flash_error"] = "Neizdevās sagatavot statusa maiņas vaicājumu.";
+    }
+
+    redirectBackToUsersManage();
+}
+
+/* ===============================
+   ĀTRĀ LOMAS MAIŅA
+================================ */
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["quick_role_user_id"], $_POST["quick_role"])) {
+    $quickUserId = (int)$_POST["quick_role_user_id"];
+    $quickRole   = trim($_POST["quick_role"]);
+
+    $currentUserId = (int)($_SESSION["lietotajs_id"] ?? 0);
+
+    if ($quickUserId <= 0) {
+        $_SESSION["flash_error"] = "Nederīgs lietotāja ID.";
+        redirectBackToUsersManage();
+    }
+
+    if (!array_key_exists($quickRole, $availableRoles)) {
+        $_SESSION["flash_error"] = "Nederīga lietotāja loma.";
+        redirectBackToUsersManage();
+    }
+
+    // Drošība: lai admin nejauši pats sev nenoņem admin tiesības
+    if ($quickUserId === $currentUserId && $quickRole !== "admin") {
+        $_SESSION["flash_error"] = "Tu nevari noņemt admin lomu pats sev.";
+        redirectBackToUsersManage();
+    }
+
+    $quickRoleId = $availableRoles[$quickRole];
+
+    $stmt = $savienojums->prepare("
+        UPDATE cm_lietotaji
+        SET 
+            loma = ?,
+            loma_id = ?
+        WHERE lietotajs_id = ?
+    ");
+
+    if ($stmt) {
+        $stmt->bind_param("sii", $quickRole, $quickRoleId, $quickUserId);
+
+        if ($stmt->execute()) {
+            $_SESSION["flash_success"] = "Lietotāja loma veiksmīgi mainīta.";
+        } else {
+            $_SESSION["flash_error"] = "Neizdevās mainīt lietotāja lomu.";
+        }
+
+        $stmt->close();
+    } else {
+        $_SESSION["flash_error"] = "Neizdevās sagatavot lomas maiņas vaicājumu.";
+    }
+
+    redirectBackToUsersManage();
 }
 
 /* ===============================
@@ -49,56 +183,97 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["delete_user_id"])) {
 $search = trim($_GET["search"] ?? "");
 $role   = trim($_GET["role"] ?? "");
 $status = trim($_GET["status"] ?? "");
+$clubId = (int)($_GET["club_id"] ?? 0);
 
-$where = [];
+$where  = [];
 $params = [];
 $types  = "";
 
 if ($search !== "") {
-    $where[] = "(lietotajvards LIKE ? OR vards LIKE ? OR uzvards LIKE ? OR epasts LIKE ?)";
+    $where[] = "(u.lietotajvards LIKE ? OR u.vards LIKE ? OR u.uzvards LIKE ? OR u.epasts LIKE ?)";
     $searchLike = "%" . $search . "%";
+
     $params[] = $searchLike;
     $params[] = $searchLike;
     $params[] = $searchLike;
     $params[] = $searchLike;
+
     $types .= "ssss";
 }
 
 if ($role !== "") {
-    $where[] = "loma = ?";
+    $where[] = "u.loma = ?";
     $params[] = $role;
     $types .= "s";
 }
 
 if ($status !== "") {
-    $where[] = "statuss = ?";
+    $where[] = "u.statuss = ?";
     $params[] = $status;
     $types .= "s";
 }
 
+if ($clubId > 0) {
+    $where[] = "u.club_id = ?";
+    $params[] = $clubId;
+    $types .= "i";
+}
+
 $whereSql = "";
+
 if (!empty($where)) {
     $whereSql = "WHERE " . implode(" AND ", $where);
 }
 
 /* ===============================
+   KLUBU SARAKSTS FILTRAM
+================================ */
+$clubs = [];
+
+$clubResult = $savienojums->query("
+    SELECT id, name
+    FROM cm_clubs
+    ORDER BY name ASC
+");
+
+if ($clubResult) {
+    while ($club = $clubResult->fetch_assoc()) {
+        $clubs[] = $club;
+    }
+}
+
+/* ===============================
    STATISTIKA
 ================================ */
-$totalUsers = 0;
+$totalUsers  = 0;
 $totalAdmins = 0;
 $totalActive = 0;
 
-$result = $savienojums->query("SELECT COUNT(*) AS total FROM cm_lietotaji");
+$result = $savienojums->query("
+    SELECT COUNT(*) AS total
+    FROM cm_lietotaji
+");
+
 if ($result && $row = $result->fetch_assoc()) {
     $totalUsers = (int)$row["total"];
 }
 
-$result = $savienojums->query("SELECT COUNT(*) AS total FROM cm_lietotaji WHERE loma = 'admin'");
+$result = $savienojums->query("
+    SELECT COUNT(*) AS total
+    FROM cm_lietotaji
+    WHERE loma = 'admin'
+");
+
 if ($result && $row = $result->fetch_assoc()) {
     $totalAdmins = (int)$row["total"];
 }
 
-$result = $savienojums->query("SELECT COUNT(*) AS total FROM cm_lietotaji WHERE statuss = 'aktīvs' OR statuss = 'aktivs'");
+$result = $savienojums->query("
+    SELECT COUNT(*) AS total
+    FROM cm_lietotaji
+    WHERE statuss = 'aktīvs'
+");
+
 if ($result && $row = $result->fetch_assoc()) {
     $totalActive = (int)$row["total"];
 }
@@ -108,21 +283,26 @@ if ($result && $row = $result->fetch_assoc()) {
 ================================ */
 $sql = "
     SELECT 
-        lietotajs_id,
-        lietotajvards,
-        vards,
-        uzvards,
-        epasts,
-        loma,
-        statuss
-    FROM cm_lietotaji
+        u.lietotajs_id,
+        u.lietotajvards,
+        u.vards,
+        u.uzvards,
+        u.epasts,
+        u.loma_id,
+        u.loma,
+        u.statuss,
+        u.club_id,
+        c.name AS club_name
+    FROM cm_lietotaji u
+    LEFT JOIN cm_clubs c ON u.club_id = c.id
     $whereSql
-    ORDER BY lietotajs_id DESC
+    ORDER BY u.lietotajs_id DESC
 ";
 
 $users = [];
 
 $stmt = $savienojums->prepare($sql);
+
 if ($stmt) {
     if (!empty($params)) {
         $stmt->bind_param($types, ...$params);
@@ -139,6 +319,10 @@ if ($stmt) {
 } else {
     $error = "Neizdevās ielādēt lietotāju sarakstu.";
 }
+
+$currentAction = htmlspecialchars($_SERVER["REQUEST_URI"] ?? "users_manage.php");
+
+require __DIR__ . "/../../includes/templates/header-admin.php";
 ?>
 
 <style>
@@ -256,7 +440,7 @@ if ($stmt) {
 
     .filter-form {
         display: grid;
-        grid-template-columns: 2fr 1fr 1fr auto auto;
+        grid-template-columns: 2fr 1fr 1fr 1fr auto auto;
         gap: .8rem;
         align-items: end;
     }
@@ -291,6 +475,8 @@ if ($stmt) {
         cursor: pointer;
         font-weight: 700;
         font-size: .95rem;
+        min-height: 48px;
+        white-space: nowrap;
     }
 
     .btn-filter.apply {
@@ -333,7 +519,7 @@ if ($stmt) {
     .users-table {
         width: 100%;
         border-collapse: collapse;
-        min-width: 900px;
+        min-width: 1100px;
     }
 
     .users-table th,
@@ -363,21 +549,71 @@ if ($stmt) {
         font-weight: 700;
     }
 
-    .badge.role {
+    .badge.club {
+        background: #fff8e6;
+        color: #7a5b00;
+    }
+
+    .muted {
+        color: #98a2b3;
+        font-style: italic;
+    }
+
+    .quick-role-form,
+    .quick-status-form {
+        margin: 0;
+    }
+
+    .quick-role-select,
+    .quick-status-select {
+        padding: .45rem .65rem;
+        border-radius: 999px;
+        border: 1px solid #d0d5dd;
+        font-size: .82rem;
+        font-weight: 800;
+        cursor: pointer;
+        outline: none;
+    }
+
+    .quick-role-select {
+        width: 155px;
         background: #eef3ff;
         color: #173f84;
+        border-color: #cfe0ff;
     }
 
-    .badge.status {
-        background: #f2f4f7;
-        color: #344054;
+    .quick-status-select {
+        width: 130px;
     }
 
-    .badge.status.active,
-    .badge.status.aktīvs,
-    .badge.status.aktivs {
+    .quick-role-select:focus,
+    .quick-status-select:focus {
+        border-color: #1e4fa1;
+        box-shadow: 0 0 0 4px rgba(30,79,161,0.10);
+    }
+
+    .quick-status-select.status-aktīvs {
         background: #ecfdf3;
         color: #027a48;
+        border-color: #abefc6;
+    }
+
+    .quick-status-select.status-gaida {
+        background: #fff8e6;
+        color: #7a5b00;
+        border-color: #f5df9f;
+    }
+
+    .quick-status-select.status-bloķēts {
+        background: #fee4e2;
+        color: #b42318;
+        border-color: #fecdca;
+    }
+
+    .quick-status-select.status-dzēsts {
+        background: #f2f4f7;
+        color: #344054;
+        border-color: #d0d5dd;
     }
 
     .action-buttons {
@@ -415,6 +651,17 @@ if ($stmt) {
         color: #667085;
     }
 
+    @media (max-width: 1200px) {
+        .filter-form {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .filter-form .btn-filter,
+        .filter-form .btn-filter.reset {
+            width: 100%;
+        }
+    }
+
     @media (max-width: 980px) {
         .filter-form {
             grid-template-columns: 1fr;
@@ -444,6 +691,7 @@ if ($stmt) {
                 <a href="<?= BASE_URL ?>admin/users/create_user.php" class="btn-admin primary">
                     <i class="fas fa-user-plus"></i> Pievienot lietotāju
                 </a>
+
                 <a href="<?= BASE_URL ?>dashboards/admin.php" class="btn-admin secondary">
                     <i class="fas fa-arrow-left"></i> Atpakaļ uz paneli
                 </a>
@@ -495,12 +743,15 @@ if ($stmt) {
                     <label for="role">Loma</label>
                     <select id="role" name="role" class="form-control">
                         <option value="">Visas</option>
-                        <option value="admin" <?= $role === 'admin' ? 'selected' : '' ?>>Admin</option>
-                        <option value="direktors" <?= $role === 'direktors' ? 'selected' : '' ?>>Direktors</option>
-                        <option value="skolotajs" <?= $role === 'skolotajs' ? 'selected' : '' ?>>Skolotājs</option>
-                        <option value="Vecāks" <?= $role === 'Vecāks' ? 'selected' : '' ?>>Vecāks</option>
-                        <option value="berns" <?= $role === 'berns' ? 'selected' : '' ?>>Bērns</option>
-                        <option value="moderators" <?= $role === 'moderators' ? 'selected' : '' ?>>Moderators</option>
+
+                        <?php foreach ($availableRoles as $roleOption => $roleId): ?>
+                            <option
+                                value="<?= htmlspecialchars($roleOption) ?>"
+                                <?= $role === $roleOption ? "selected" : "" ?>
+                            >
+                                <?= htmlspecialchars($roleOption) ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
 
@@ -508,10 +759,31 @@ if ($stmt) {
                     <label for="status">Statuss</label>
                     <select id="status" name="status" class="form-control">
                         <option value="">Visi</option>
-                        <option value="aktīvs" <?= $status === 'aktīvs' ? 'selected' : '' ?>>Aktīvs</option>
-                        <option value="aktivs" <?= $status === 'aktivs' ? 'selected' : '' ?>>Aktīvs (bez garumzīmes)</option>
-                        <option value="neaktīvs" <?= $status === 'neaktīvs' ? 'selected' : '' ?>>Neaktīvs</option>
-                        <option value="bloķēts" <?= $status === 'bloķēts' ? 'selected' : '' ?>>Bloķēts</option>
+
+                        <?php foreach ($availableStatuses as $statusOption): ?>
+                            <option
+                                value="<?= htmlspecialchars($statusOption) ?>"
+                                <?= $status === $statusOption ? "selected" : "" ?>
+                            >
+                                <?= htmlspecialchars(ucfirst($statusOption)) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="club_id">Klubs</label>
+                    <select id="club_id" name="club_id" class="form-control">
+                        <option value="0">Visi klubi</option>
+
+                        <?php foreach ($clubs as $club): ?>
+                            <option
+                                value="<?= (int)$club["id"] ?>"
+                                <?= $clubId === (int)$club["id"] ? "selected" : "" ?>
+                            >
+                                <?= htmlspecialchars($club["name"]) ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
 
@@ -538,38 +810,104 @@ if ($stmt) {
                                 <th>Vārds, uzvārds</th>
                                 <th>E-pasts</th>
                                 <th>Loma</th>
+                                <th>Klubs</th>
                                 <th>Statuss</th>
                                 <th>Darbības</th>
                             </tr>
                         </thead>
+
                         <tbody>
                             <?php foreach ($users as $user): ?>
                                 <?php
                                     $statusClass = mb_strtolower((string)$user["statuss"]);
+                                    $fullName = trim(($user["vards"] ?? "") . " " . ($user["uzvards"] ?? ""));
+                                    $currentUserRole = (string)($user["loma"] ?? "");
                                 ?>
+
                                 <tr>
                                     <td>#<?= (int)$user["lietotajs_id"] ?></td>
+
                                     <td><?= htmlspecialchars($user["lietotajvards"]) ?></td>
+
                                     <td>
-                                        <?= htmlspecialchars(trim(($user["vards"] ?? "") . " " . ($user["uzvards"] ?? ""))) ?>
+                                        <?= $fullName !== "" ? htmlspecialchars($fullName) : '<span class="muted">Nav norādīts</span>' ?>
                                     </td>
+
                                     <td><?= htmlspecialchars($user["epasts"]) ?></td>
+
                                     <td>
-                                        <span class="badge role"><?= htmlspecialchars($user["loma"]) ?></span>
+                                        <form method="POST" action="<?= $currentAction ?>" class="quick-role-form">
+                                            <input
+                                                type="hidden"
+                                                name="quick_role_user_id"
+                                                value="<?= (int)$user["lietotajs_id"] ?>"
+                                            >
+
+                                            <select
+                                                name="quick_role"
+                                                class="quick-role-select"
+                                                onchange="this.form.submit()"
+                                            >
+                                                <?php if ($currentUserRole !== "" && !array_key_exists($currentUserRole, $availableRoles)): ?>
+                                                    <option value="<?= htmlspecialchars($currentUserRole) ?>" selected>
+                                                        <?= htmlspecialchars($currentUserRole) ?>
+                                                    </option>
+                                                <?php endif; ?>
+
+                                                <?php foreach ($availableRoles as $roleOption => $roleId): ?>
+                                                    <option
+                                                        value="<?= htmlspecialchars($roleOption) ?>"
+                                                        <?= $currentUserRole === $roleOption ? "selected" : "" ?>
+                                                    >
+                                                        <?= htmlspecialchars($roleOption) ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </form>
                                     </td>
+
                                     <td>
-                                        <span class="badge status <?= htmlspecialchars($statusClass) ?>">
-                                            <?= htmlspecialchars($user["statuss"]) ?>
-                                        </span>
+                                        <?php if (!empty($user["club_name"])): ?>
+                                            <span class="badge club"><?= htmlspecialchars($user["club_name"]) ?></span>
+                                        <?php else: ?>
+                                            <span class="muted">Nav piesaistīts</span>
+                                        <?php endif; ?>
                                     </td>
+
+                                    <td>
+                                        <form method="POST" action="<?= $currentAction ?>" class="quick-status-form">
+                                            <input
+                                                type="hidden"
+                                                name="quick_status_user_id"
+                                                value="<?= (int)$user["lietotajs_id"] ?>"
+                                            >
+
+                                            <select
+                                                name="quick_status"
+                                                class="quick-status-select status-<?= htmlspecialchars($statusClass) ?>"
+                                                onchange="this.form.submit()"
+                                            >
+                                                <?php foreach ($availableStatuses as $statusOption): ?>
+                                                    <option
+                                                        value="<?= htmlspecialchars($statusOption) ?>"
+                                                        <?= $user["statuss"] === $statusOption ? "selected" : "" ?>
+                                                    >
+                                                        <?= htmlspecialchars(ucfirst($statusOption)) ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </form>
+                                    </td>
+
                                     <td>
                                         <div class="action-buttons">
                                             <a href="<?= BASE_URL ?>admin/users/edit_user.php?id=<?= (int)$user["lietotajs_id"] ?>" class="btn-small btn-edit">
                                                 <i class="fas fa-pen"></i> Rediģēt
                                             </a>
 
-                                            <form method="POST" onsubmit="return confirm('Vai tiešām dzēst šo lietotāju?');" style="display:inline;">
+                                            <form method="POST" action="<?= $currentAction ?>" onsubmit="return confirm('Vai tiešām dzēst šo lietotāju?');" style="display:inline;">
                                                 <input type="hidden" name="delete_user_id" value="<?= (int)$user["lietotajs_id"] ?>">
+
                                                 <button type="submit" class="btn-small btn-delete">
                                                     <i class="fas fa-trash"></i> Dzēst
                                                 </button>
@@ -577,15 +915,19 @@ if ($stmt) {
                                         </div>
                                     </td>
                                 </tr>
+
                             <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
+
             <?php else: ?>
+
                 <div class="empty-state">
                     <i class="fas fa-users-slash" style="font-size:2rem; margin-bottom:.7rem; color:#98a2b3;"></i>
                     <p>Neviens lietotājs neatbilst izvēlētajiem filtriem.</p>
                 </div>
+
             <?php endif; ?>
         </section>
 

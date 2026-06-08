@@ -7,6 +7,82 @@ $title = "Vecāku panelis - Ceļa meklētāji";
 require_once __DIR__ . "/../includes/config/database.php";
 
 /* ===============================
+   DATUMA UN LAIKA FORMATĒŠANA
+================================ */
+
+if (!function_exists("formatEventTimeRange")) {
+    function formatEventTimeRange($startTime, $endTime = null)
+    {
+        if (empty($startTime) && empty($endTime)) {
+            return "";
+        }
+
+        $startFormatted = "";
+        $endFormatted   = "";
+
+        if (!empty($startTime)) {
+            $timestamp = strtotime($startTime);
+            if ($timestamp !== false) {
+                $startFormatted = date("H:i", $timestamp);
+            }
+        }
+
+        if (!empty($endTime)) {
+            $timestamp = strtotime($endTime);
+            if ($timestamp !== false) {
+                $endFormatted = date("H:i", $timestamp);
+            }
+        }
+
+        if ($startFormatted !== "" && $endFormatted !== "") {
+            return $startFormatted . " - " . $endFormatted;
+        }
+
+        if ($startFormatted !== "") {
+            return $startFormatted;
+        }
+
+        return $endFormatted;
+    }
+}
+
+if (!function_exists("formatEventDateRange")) {
+    function formatEventDateRange($startDate, $endDate = null)
+    {
+        if (empty($startDate) && empty($endDate)) {
+            return "";
+        }
+
+        $startFormatted = "";
+        $endFormatted   = "";
+
+        if (!empty($startDate)) {
+            $timestamp = strtotime($startDate);
+            if ($timestamp !== false) {
+                $startFormatted = date("d.m.Y", $timestamp);
+            }
+        }
+
+        if (!empty($endDate)) {
+            $timestamp = strtotime($endDate);
+            if ($timestamp !== false) {
+                $endFormatted = date("d.m.Y", $timestamp);
+            }
+        }
+
+        if ($startFormatted !== "" && $endFormatted !== "" && $startFormatted !== $endFormatted) {
+            return $startFormatted . " - " . $endFormatted;
+        }
+
+        if ($startFormatted !== "") {
+            return $startFormatted;
+        }
+
+        return $endFormatted;
+    }
+}
+
+/* ===============================
    DROŠĪBA
 ================================ */
 if (

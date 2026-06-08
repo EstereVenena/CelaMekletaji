@@ -6,6 +6,9 @@ $title = "Aktivitātes - Ceļa meklētāji";
 
 require_once __DIR__ . "/../includes/config/database.php";
 
+/* ===============================
+   DROŠĪBA
+================================ */
 if (
     !isset($_SESSION["lietotajs_id"]) ||
     !in_array(($_SESSION["loma"] ?? ""), ["Vecāks", "parent"], true)
@@ -15,9 +18,61 @@ if (
 }
 
 $parentId = (int) $_SESSION["lietotajs_id"];
-$error = null;
+
+$error = $_SESSION["flash_error"] ?? null;
+$success = $_SESSION["flash_success"] ?? null;
+
+unset($_SESSION["flash_error"], $_SESSION["flash_success"]);
+
 $activities = [];
 
+/* ===============================
+   ATTEIKŠANĀS NO AKTIVITĀTES
+================================ */
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["cancel_application_id"])) {
+    $applicationId = (int)($_POST["cancel_application_id"] ?? 0);
+
+    if ($applicationId <= 0) {
+        $_SESSION["flash_error"] = "Nederīgs pieteikuma ID.";
+        header("Location: " . $_SERVER["REQUEST_URI"]);
+        exit();
+    }
+
+    $cancelSql = "
+        UPDATE cm_event_applications ea
+        INNER JOIN cm_parent_children pc
+            ON pc.child_id = ea.child_id
+        SET ea.status = 'atteikts'
+        WHERE ea.id = ?
+          AND pc.parent_id = ?
+          AND ea.status IN ('pieteikts', 'apstiprināts')
+    ";
+
+    if ($stmt = $savienojums->prepare($cancelSql)) {
+        $stmt->bind_param("ii", $applicationId, $parentId);
+
+        if ($stmt->execute()) {
+            if ($stmt->affected_rows > 0) {
+                $_SESSION["flash_success"] = "Pieteikums veiksmīgi atcelts.";
+            } else {
+                $_SESSION["flash_error"] = "Neizdevās atcelt pieteikumu vai tas jau ir atcelts.";
+            }
+        } else {
+            $_SESSION["flash_error"] = "Neizdevās atteikties no aktivitātes.";
+        }
+
+        $stmt->close();
+    } else {
+        $_SESSION["flash_error"] = "Neizdevās sagatavot atteikšanās vaicājumu.";
+    }
+
+    header("Location: " . $_SERVER["REQUEST_URI"]);
+    exit();
+}
+
+/* ===============================
+   AKTIVITĀŠU IELĀDE
+================================ */
 $sql = "
     SELECT
         e.id AS event_id,
@@ -35,6 +90,7 @@ $sql = "
         c.vards AS child_vards,
         c.uzvards AS child_uzvards,
 
+        ea.id AS application_id,
         ea.status AS application_status,
         ea.applied_at
     FROM cm_parent_children pc
@@ -298,6 +354,12 @@ require __DIR__ . "/../includes/templates/header-parent.php";
     font-weight: 800;
 }
 
+.activities-alert-success {
+    background: #ecfdf3;
+    border-color: #abefc6;
+    color: #027a48;
+}
+
 .calendar-card,
 .activities-list-card {
     padding: 1.35rem;
@@ -525,9 +587,41 @@ require __DIR__ . "/../includes/templates/header-parent.php";
     line-height: 1.55;
 }
 
+.activity-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: .65rem;
+}
+
 .activity-status {
-    align-self: flex-start;
+    align-self: flex-end;
     white-space: nowrap;
+}
+
+.cancel-activity-form {
+    margin: 0;
+}
+
+.btn-cancel-activity {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem;
+    padding: .55rem .85rem;
+    border: none;
+    border-radius: 999px;
+    background: #fee4e2;
+    color: #b42318;
+    font-weight: 900;
+    font-size: .84rem;
+    cursor: pointer;
+    transition: .2s ease;
+}
+
+.btn-cancel-activity:hover {
+    background: #fecdca;
+    transform: translateY(-1px);
 }
 
 .activities-empty {
@@ -548,6 +642,14 @@ require __DIR__ . "/../includes/templates/header-parent.php";
     .activities-hero,
     .activity-card {
         grid-template-columns: 1fr;
+    }
+
+    .activity-actions {
+        align-items: flex-start;
+    }
+
+    .activity-status {
+        align-self: flex-start;
     }
 
     .calendar-toolbar,
@@ -629,6 +731,13 @@ require __DIR__ . "/../includes/templates/header-parent.php";
             <div class="activities-alert">
                 <i class="fas fa-triangle-exclamation"></i>
                 <span><?= htmlspecialchars($error); ?></span>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($success): ?>
+            <div class="activities-alert activities-alert-success">
+                <i class="fas fa-circle-check"></i>
+                <span><?= htmlspecialchars($success); ?></span>
             </div>
         <?php endif; ?>
 
@@ -774,9 +883,28 @@ require __DIR__ . "/../includes/templates/header-parent.php";
                                 <?php endif; ?>
                             </div>
 
-                            <span class="badge badge-blue activity-status">
-                                <?= htmlspecialchars($activity["application_status"] ?? "—"); ?>
-                            </span>
+                            <div class="activity-actions">
+                                <span class="badge badge-blue activity-status">
+                                    <?= htmlspecialchars($activity["application_status"] ?? "—"); ?>
+                                </span>
+
+                                <form
+                                    method="POST"
+                                    class="cancel-activity-form"
+                                    onsubmit="return confirm('Vai tiešām vēlies atteikties no šīs aktivitātes?');"
+                                >
+                                    <input
+                                        type="hidden"
+                                        name="cancel_application_id"
+                                        value="<?= (int)$activity["application_id"]; ?>"
+                                    >
+
+                                    <button type="submit" class="btn-cancel-activity">
+                                        <i class="fas fa-xmark"></i>
+                                        Atteikties
+                                    </button>
+                                </form>
+                            </div>
                         </article>
                     <?php endforeach; ?>
                 </div>

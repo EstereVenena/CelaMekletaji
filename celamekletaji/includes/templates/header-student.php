@@ -27,7 +27,13 @@ $studentLessonsUrl      = $studentBase . "lessons.php";
 $studentApplicationsUrl = $studentBase . "applications.php";
 $studentEventsUrl       = $studentBase . "events.php";
 $studentCalendarUrl     = $studentBase . "calendar.php";
-$studentProfileUrl      = $studentBase . "profile.php";
+
+/*
+   Kopīgais profila fails visām lomām:
+   /4pt/venena/celamekletaji/profile.php
+*/
+$studentProfileUrl      = BASE_URL . "profile.php";
+
 $studentNewsUrl         = $studentBase . "news.php";
 $logoutUrl              = BASE_URL . "auth/logout.php";
 $homeUrl                = BASE_URL . "auth/logout.php?redirect=home";
@@ -551,12 +557,11 @@ if ($username !== '') {
                 </button>
 
                 <div class="student-club-menu" id="studentClubMenu">
-                <a href="<?= $studentCalendarUrl ?>" class="<?= studentNavActive(['calendar.php'], $currentPage) ?>">
+                    <a href="<?= $studentCalendarUrl ?>" class="<?= studentNavActive(['calendar.php'], $currentPage) ?>">
                         <i class="fas fa-calendar-week"></i>
                         <span>Kalendārs</span>
                     </a>
 
-                
                     <a href="<?= $studentLessonsUrl ?>" class="<?= studentNavActive(['lessons.php'], $currentPage) ?>">
                         <i class="fas fa-book-open"></i>
                         <span>Nodarbības</span>
@@ -571,7 +576,6 @@ if ($username !== '') {
                         <i class="fas fa-calendar-days"></i>
                         <span>Pasākumi</span>
                     </a>
-
                 </div>
             </div>
 
@@ -602,38 +606,40 @@ if ($username !== '') {
                     </span>
                 </button>
 
-               <div class="student-dropdown">
-    <div class="student-dropdown-head">
-        <span class="student-dropdown-avatar">
-            <?= htmlspecialchars($initials); ?>
-        </span>
+                <div class="student-dropdown">
+                    <div class="student-dropdown-head">
+                        <span class="student-dropdown-avatar">
+                            <?= htmlspecialchars($initials); ?>
+                        </span>
 
-        <div>
-            <div class="student-dropdown-name">
-                <?= htmlspecialchars($username ?: 'Ceļameklētājs'); ?>
+                        <div>
+                            <div class="student-dropdown-name">
+                                <?= htmlspecialchars($username ?: 'Ceļameklētājs'); ?>
+                            </div>
+
+                            <div class="student-dropdown-role">
+                                <?= htmlspecialchars($userRole ?: 'Ceļameklētājs'); ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <a href="<?= $studentProfileUrl ?>" class="student-dropdown-link">
+                        <i class="fas fa-user-gear"></i>
+                        <span>Mans profils</span>
+                    </a>
+
+                    <a href="<?= $homeUrl ?>" class="student-dropdown-link">
+                        <i class="fas fa-house"></i>
+                        <span>Uz sākumlapu</span>
+                    </a>
+
+                    <a href="<?= $logoutUrl ?>" class="student-dropdown-link student-dropdown-link--danger">
+                        <i class="fas fa-right-from-bracket"></i>
+                        <span>Iziet</span>
+                    </a>
+                </div>
             </div>
 
-            <div class="student-dropdown-role">
-                <?= htmlspecialchars($userRole ?: 'Ceļameklētājs'); ?>
-            </div>
-        </div>
-    </div>
-
-    <a href="<?= $studentProfileUrl ?>" class="student-dropdown-link">
-        <i class="fas fa-user-gear"></i>
-        <span>Mans profils</span>
-    </a>
-
-    <a href="<?= $homeUrl ?>" class="student-dropdown-link">
-        <i class="fas fa-house"></i>
-        <span>Uz sākumlapu</span>
-    </a>
-
-    <a href="<?= $logoutUrl ?>" class="student-dropdown-link student-dropdown-link--danger">
-        <i class="fas fa-right-from-bracket"></i>
-        <span>Iziet</span>
-    </a>
-</div>
             <button
                 id="studentMenuBtn"
                 class="student-menu-btn"

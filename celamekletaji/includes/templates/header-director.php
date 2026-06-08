@@ -29,11 +29,6 @@ function directorNavActive(array $pages, string $currentPage): string
     return in_array($currentPage, $pages, true) ? 'is-active' : '';
 }
 
-function directorUrlActive(string $needle, string $currentUrl): string
-{
-    return str_contains($currentUrl, $needle) ? 'is-active' : '';
-}
-
 /* ===============================
    SAITES
 ================================ */
@@ -43,6 +38,7 @@ $clubUrl             = BASE_URL . 'director/club.php';
 $clubActivitiesUrl   = BASE_URL . 'director/activities.php';
 $clubApplicationsUrl = BASE_URL . 'director/applications.php';
 $clubLessonsUrl      = BASE_URL . 'director/lesson_plans.php';
+$clubNewsAddUrl      = BASE_URL . 'director/news_add.php';
 
 $childrenUrl = BASE_URL . 'director/users.php?role=children';
 $parentsUrl  = BASE_URL . 'director/users.php?role=parents';
@@ -50,7 +46,13 @@ $teachersUrl = BASE_URL . 'director/users.php?role=teachers';
 $allUsersUrl = BASE_URL . 'director/users.php';
 
 $addUserUrl = BASE_URL . 'director/add_user.php';
+
+/*
+   Kopīgais profila fails visām lomām:
+   /4pt/venena/celamekletaji/profile.php
+*/
 $profileUrl = BASE_URL . 'profile.php';
+
 $homeUrl    = BASE_URL . 'auth/logout.php?redirect=home';
 $logoutUrl  = BASE_URL . 'auth/logout.php';
 
@@ -58,7 +60,8 @@ $clubDropdownActive = (
     str_contains($currentUrl, '/director/club.php') ||
     str_contains($currentUrl, '/director/activities.php') ||
     str_contains($currentUrl, '/director/applications.php') ||
-    str_contains($currentUrl, '/director/lesson_plans.php')
+    str_contains($currentUrl, '/director/lesson_plans.php') ||
+    str_contains($currentUrl, '/director/news_add.php')
 );
 
 $usersDropdownActive = (
@@ -233,6 +236,7 @@ if ($username !== '') {
             visibility: hidden;
             transform: translateY(8px) scale(.98);
             transition: .18s ease;
+            z-index: 2400;
         }
 
         .director-dropdown-menu.is-open {
@@ -334,7 +338,7 @@ if ($username !== '') {
             box-shadow: 0 16px 34px rgba(244, 196, 48, 0.32);
         }
 
-        .director-account-menu {
+        .director-dropdown-profile {
             position: absolute;
             top: calc(100% + .85rem);
             right: 0;
@@ -348,15 +352,16 @@ if ($username !== '') {
             visibility: hidden;
             transform: translateY(8px) scale(.98);
             transition: .18s ease;
+            z-index: 3000;
         }
 
-        .director-user-menu.open .director-account-menu {
+        .director-user-menu.open .director-dropdown-profile {
             opacity: 1;
             visibility: visible;
             transform: translateY(0) scale(1);
         }
 
-        .director-account-head {
+        .director-dropdown-head {
             display: flex;
             align-items: center;
             gap: .75rem;
@@ -366,7 +371,7 @@ if ($username !== '') {
             margin-bottom: .5rem;
         }
 
-        .director-account-avatar-small {
+        .director-dropdown-avatar {
             width: 42px;
             height: 42px;
             border-radius: 50%;
@@ -378,20 +383,20 @@ if ($username !== '') {
             flex-shrink: 0;
         }
 
-        .director-account-name {
+        .director-dropdown-name {
             font-weight: 1000;
             color: #101828;
             line-height: 1.2;
         }
 
-        .director-account-role {
+        .director-dropdown-role {
             font-size: .86rem;
             color: #667085;
             font-weight: 800;
             margin-top: .1rem;
         }
 
-        .director-account-link {
+        .director-dropdown-link {
             display: flex;
             align-items: center;
             gap: .7rem;
@@ -403,26 +408,26 @@ if ($username !== '') {
             transition: .2s ease;
         }
 
-        .director-account-link i {
+        .director-dropdown-link i {
             width: 20px;
             color: #1e4fa1;
             text-align: center;
         }
 
-        .director-account-link:hover {
+        .director-dropdown-link:hover {
             background: #eef3ff;
             color: #173f84;
         }
 
-        .director-account-link--danger {
+        .director-dropdown-link--danger {
             color: #b42318;
         }
 
-        .director-account-link--danger i {
+        .director-dropdown-link--danger i {
             color: #b42318;
         }
 
-        .director-account-link--danger:hover {
+        .director-dropdown-link--danger:hover {
             background: #fff0f0;
             color: #b42318;
         }
@@ -544,7 +549,7 @@ if ($username !== '') {
                 display: none;
             }
 
-            .director-account-menu {
+            .director-dropdown-profile {
                 position: fixed;
                 top: 76px;
                 right: 1rem;
@@ -599,7 +604,12 @@ if ($username !== '') {
 
                     <a href="<?= $clubActivitiesUrl ?>" class="<?= directorNavActive(['activities.php'], $currentPage); ?>">
                         <i class="fas fa-calendar-days"></i>
-                        <span>Aktivitātes</span>
+                        <span>Pasākumi</span>
+                    </a>
+
+                    <a href="<?= $clubNewsAddUrl ?>" class="<?= directorNavActive(['news_add.php'], $currentPage); ?>">
+                        <i class="fas fa-newspaper"></i>
+                        <span>Pievienot jaunumu</span>
                     </a>
 
                     <a href="<?= $clubApplicationsUrl ?>" class="<?= directorNavActive(['applications.php'], $currentPage); ?>">
@@ -665,47 +675,47 @@ if ($username !== '') {
             </a>
 
             <div class="director-user-menu" id="directorUserMenu">
+
                 <button
                     class="director-avatar-btn"
                     id="directorAvatarBtn"
                     type="button"
                     aria-label="Atvērt lietotāja izvēlni"
                     aria-expanded="false"
-                    title="<?= htmlspecialchars($username); ?>"
                 >
                     <span class="director-avatar">
                         <?= htmlspecialchars($initials); ?>
                     </span>
                 </button>
 
-                <div class="director-account-menu" id="directorAccountMenu">
-                    <div class="director-account-head">
-                        <span class="director-account-avatar-small">
+                <div class="director-dropdown-profile">
+                    <div class="director-dropdown-head">
+                        <span class="director-dropdown-avatar">
                             <?= htmlspecialchars($initials); ?>
                         </span>
 
                         <div>
-                            <div class="director-account-name">
+                            <div class="director-dropdown-name">
                                 <?= htmlspecialchars($username ?: 'Direktors'); ?>
                             </div>
 
-                            <div class="director-account-role">
+                            <div class="director-dropdown-role">
                                 <?= htmlspecialchars($userRole ?: 'Direktors'); ?>
                             </div>
                         </div>
                     </div>
 
-                    <a href="<?= $profileUrl ?>" class="director-account-link">
+                    <a href="<?= $profileUrl ?>" class="director-dropdown-link">
                         <i class="fas fa-user-pen"></i>
                         <span>Labot profilu</span>
                     </a>
 
-                    <a href="<?= $homeUrl ?>" class="director-account-link">
+                    <a href="<?= $homeUrl ?>" class="director-dropdown-link">
                         <i class="fas fa-house"></i>
                         <span>Uz sākumlapu</span>
                     </a>
 
-                    <a href="<?= $logoutUrl ?>" class="director-account-link director-account-link--danger">
+                    <a href="<?= $logoutUrl ?>" class="director-dropdown-link director-dropdown-link--danger">
                         <i class="fas fa-right-from-bracket"></i>
                         <span>Iziet</span>
                     </a>
@@ -768,12 +778,6 @@ if ($username !== '') {
         avatarBtn.setAttribute('aria-expanded', 'false');
     }
 
-    function closeAllDropdowns() {
-        closeClubMenu();
-        closeUsersMenu();
-        closeUserMenu();
-    }
-
     function openMenu() {
         if (!menuBtn || !nav || !backdrop) return;
 
@@ -803,16 +807,9 @@ if ($username !== '') {
         closeUsersMenu();
     }
 
-    menuBtn?.addEventListener('click', function () {
-        nav.classList.contains('is-open') ? closeMenu() : openMenu();
-    });
+    function toggleUserMenu(event) {
+        if (!avatarBtn || !userMenu) return;
 
-    backdrop?.addEventListener('click', function () {
-        closeMenu();
-        closeAllDropdowns();
-    });
-
-    avatarBtn?.addEventListener('click', function (event) {
         event.stopPropagation();
 
         const isOpen = userMenu.classList.toggle('open');
@@ -821,7 +818,26 @@ if ($username !== '') {
         closeMenu();
         closeClubMenu();
         closeUsersMenu();
+    }
+
+    menuBtn?.addEventListener('click', function () {
+        if (!nav) return;
+
+        if (nav.classList.contains('is-open')) {
+            closeMenu();
+        } else {
+            openMenu();
+        }
     });
+
+    backdrop?.addEventListener('click', function () {
+        closeMenu();
+        closeUserMenu();
+        closeClubMenu();
+        closeUsersMenu();
+    });
+
+    avatarBtn?.addEventListener('click', toggleUserMenu);
 
     clubToggle?.addEventListener('click', function (event) {
         event.stopPropagation();
@@ -845,6 +861,15 @@ if ($username !== '') {
         closeUserMenu();
     });
 
+    nav?.querySelectorAll('a').forEach(function (link) {
+        link.addEventListener('click', function () {
+            closeMenu();
+            closeUserMenu();
+            closeClubMenu();
+            closeUsersMenu();
+        });
+    });
+
     document.addEventListener('click', function (event) {
         if (userMenu && !userMenu.contains(event.target)) {
             closeUserMenu();
@@ -859,17 +884,12 @@ if ($username !== '') {
         }
     });
 
-    nav?.querySelectorAll('a').forEach(function (link) {
-        link.addEventListener('click', function () {
-            closeMenu();
-            closeAllDropdowns();
-        });
-    });
-
     document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') {
             closeMenu();
-            closeAllDropdowns();
+            closeUserMenu();
+            closeClubMenu();
+            closeUsersMenu();
         }
     });
 })();

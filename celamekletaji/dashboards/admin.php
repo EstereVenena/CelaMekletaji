@@ -11,7 +11,6 @@ require_once __DIR__ . "/../includes/config/database.php";
 $stats = [
     'users'   => 0,
     'news'    => 0,
-    'events'  => 0,
     'clubs'   => 0,
     'gallery' => 0,
 ];
@@ -43,15 +42,6 @@ if ($galleryCheck && $galleryCheck->num_rows > 0) {
     $result = $savienojums->query("SELECT COUNT(*) AS total FROM cm_gallery_images");
     if ($result && $row = $result->fetch_assoc()) {
         $stats['gallery'] = (int)$row['total'];
-    }
-}
-
-// Pasākumi
-$eventsCheck = $savienojums->query("SHOW TABLES LIKE 'cm_events'");
-if ($eventsCheck && $eventsCheck->num_rows > 0) {
-    $result = $savienojums->query("SELECT COUNT(*) AS total FROM cm_events");
-    if ($result && $row = $result->fetch_assoc()) {
-        $stats['events'] = (int)$row['total'];
     }
 }
 ?>
@@ -146,11 +136,15 @@ if ($eventsCheck && $eventsCheck->num_rows > 0) {
         line-height: 1.55;
     }
 
+    /* ===============================
+       STATISTIKA - VIENĀDAS KARTĪTES
+    ================================ */
     .admin-stats {
         display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 1rem;
         margin-bottom: 1.4rem;
+        align-items: stretch;
     }
 
     .admin-stat-card {
@@ -160,8 +154,12 @@ if ($eventsCheck && $eventsCheck->num_rows > 0) {
         border: 1px solid #e8eef8;
         border-radius: 22px;
         padding: 1.25rem;
+        min-height: 135px;
+        height: 100%;
         box-shadow: 0 14px 32px rgba(16, 24, 40, 0.06);
         transition: .2s ease;
+        display: flex;
+        align-items: center;
     }
 
     .admin-stat-card:hover {
@@ -184,9 +182,10 @@ if ($eventsCheck && $eventsCheck->num_rows > 0) {
         position: relative;
         z-index: 1;
         display: flex;
-        align-items: flex-start;
+        align-items: center;
         justify-content: space-between;
         gap: .8rem;
+        width: 100%;
     }
 
     .admin-stat-icon {
@@ -207,10 +206,11 @@ if ($eventsCheck && $eventsCheck->num_rows > 0) {
         color: #667085;
         font-size: .92rem;
         font-weight: 800;
+        min-height: 22px;
     }
 
     .admin-stat-value {
-        margin: .15rem 0 0;
+        margin: .25rem 0 0;
         font-size: 2rem;
         font-weight: 1000;
         color: #101828;
@@ -342,17 +342,13 @@ if ($eventsCheck && $eventsCheck->num_rows > 0) {
 
     @media (max-width: 1100px) {
         .admin-stats {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(2, minmax(0, 1fr));
         }
     }
 
     @media (max-width: 900px) {
         .admin-hero {
             grid-template-columns: 1fr;
-        }
-
-        .admin-stats {
-            grid-template-columns: 1fr 1fr;
         }
 
         .admin-grid {
@@ -381,6 +377,10 @@ if ($eventsCheck && $eventsCheck->num_rows > 0) {
         .admin-panel {
             padding: 1rem;
             border-radius: 20px;
+        }
+
+        .admin-stat-card {
+            min-height: 120px;
         }
     }
 </style>
@@ -418,6 +418,7 @@ if ($eventsCheck && $eventsCheck->num_rows > 0) {
                         <p class="admin-stat-label">Lietotāji</p>
                         <p class="admin-stat-value"><?= (int)$stats['users'] ?></p>
                     </div>
+
                     <span class="admin-stat-icon">
                         <i class="fas fa-users"></i>
                     </span>
@@ -430,6 +431,7 @@ if ($eventsCheck && $eventsCheck->num_rows > 0) {
                         <p class="admin-stat-label">Jaunumi</p>
                         <p class="admin-stat-value"><?= (int)$stats['news'] ?></p>
                     </div>
+
                     <span class="admin-stat-icon">
                         <i class="fas fa-newspaper"></i>
                     </span>
@@ -442,6 +444,7 @@ if ($eventsCheck && $eventsCheck->num_rows > 0) {
                         <p class="admin-stat-label">Klubi</p>
                         <p class="admin-stat-value"><?= (int)$stats['clubs'] ?></p>
                     </div>
+
                     <span class="admin-stat-icon">
                         <i class="fas fa-location-dot"></i>
                     </span>
@@ -454,20 +457,9 @@ if ($eventsCheck && $eventsCheck->num_rows > 0) {
                         <p class="admin-stat-label">Galerija</p>
                         <p class="admin-stat-value"><?= (int)$stats['gallery'] ?></p>
                     </div>
+
                     <span class="admin-stat-icon">
                         <i class="fas fa-images"></i>
-                    </span>
-                </div>
-            </div>
-
-            <div class="admin-stat-card">
-                <div class="admin-stat-top">
-                    <div>
-                        <p class="admin-stat-label">Pasākumi</p>
-                        <p class="admin-stat-value"><?= (int)$stats['events'] ?></p>
-                    </div>
-                    <span class="admin-stat-icon">
-                        <i class="fas fa-calendar-days"></i>
                     </span>
                 </div>
             </div>
@@ -489,6 +481,7 @@ if ($eventsCheck && $eventsCheck->num_rows > 0) {
                         <span class="admin-action-icon">
                             <i class="fas fa-newspaper"></i>
                         </span>
+
                         <div>
                             <h3>Pārvaldīt jaunumus</h3>
                             <p>Skatīt, pievienot, labot un dzēst aktuālo informāciju.</p>
@@ -499,6 +492,7 @@ if ($eventsCheck && $eventsCheck->num_rows > 0) {
                         <span class="admin-action-icon">
                             <i class="fas fa-users-gear"></i>
                         </span>
+
                         <div>
                             <h3>Pārvaldīt lietotājus</h3>
                             <p>Rediģēt kontus, lomas un piekļuves tiesības.</p>
@@ -509,6 +503,7 @@ if ($eventsCheck && $eventsCheck->num_rows > 0) {
                         <span class="admin-action-icon">
                             <i class="fas fa-location-dot"></i>
                         </span>
+
                         <div>
                             <h3>Pārvaldīt klubus</h3>
                             <p>Pievienot vai labot klubu informāciju un programmas.</p>
@@ -519,6 +514,7 @@ if ($eventsCheck && $eventsCheck->num_rows > 0) {
                         <span class="admin-action-icon">
                             <i class="fas fa-images"></i>
                         </span>
+
                         <div>
                             <h3>Pārvaldīt galeriju</h3>
                             <p>Augšupielādēt un sakārtot attēlus pa kategorijām.</p>
@@ -529,6 +525,7 @@ if ($eventsCheck && $eventsCheck->num_rows > 0) {
                         <span class="admin-action-icon">
                             <i class="fas fa-house"></i>
                         </span>
+
                         <div>
                             <h3>Uz sākumlapu</h3>
                             <p>Pārbaudīt publisko lapas izskatu un saturu.</p>
@@ -539,6 +536,7 @@ if ($eventsCheck && $eventsCheck->num_rows > 0) {
                         <span class="admin-action-icon">
                             <i class="fas fa-right-from-bracket"></i>
                         </span>
+
                         <div>
                             <h3>Iziet no sistēmas</h3>
                             <p>Droši aizvērt administrēšanas sesiju.</p>
