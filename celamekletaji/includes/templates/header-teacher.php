@@ -4,56 +4,89 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once __DIR__ . '/../config/app.php';
+require_once __DIR__ . '/../config/database.php';
 
-$isLoggedIn = isset($_SESSION["lietotajs_id"]);
+$allowedRoles = ['Skolotājs', 'skolotājs', 'teacher'];
 
-$username = trim($_SESSION["lietotajvards"] ?? '');
-$userRole = trim($_SESSION["loma"] ?? '');
-
-$lomasAtlautas = ["Skolēns", "Ceļameklētājs", "Bērns", "student", "child"];
-
-if (!$isLoggedIn || !in_array($userRole, $lomasAtlautas, true)) {
+if (
+    !isset($_SESSION["lietotajs_id"]) ||
+    !in_array(($_SESSION["loma"] ?? ''), $allowedRoles, true)
+) {
     header("Location: " . BASE_URL . "auth/login.php");
     exit();
 }
 
-/* ===============================
-   SAITES
-================================ */
-$studentBase = BASE_URL . "student/";
-
-$studentPanelUrl        = BASE_URL . "dashboards/student.php";
-$studentLessonsUrl      = $studentBase . "lessons.php";
-$studentApplicationsUrl = $studentBase . "applications.php";
-$studentEventsUrl       = $studentBase . "events.php";
-$studentCalendarUrl     = $studentBase . "calendar.php";
-
-/*
-   Kopīgais profila fails visām lomām:
-   /4pt/venena/celamekletaji/profile.php
-*/
-$studentProfileUrl      = BASE_URL . "profile.php";
-
-$studentNewsUrl         = $studentBase . "news.php";
-$notificationsUrl       = BASE_URL . "dashboards/notifications.php";
-
-$logoutUrl              = BASE_URL . "auth/logout.php";
-$homeUrl                = BASE_URL . "auth/logout.php?redirect=home";
+$username = trim($_SESSION["lietotajvards"] ?? 'Skolotājs');
+$userRole = trim($_SESSION["loma"] ?? 'Skolotājs');
 
 /* ===============================
-   AKTĪVĀ LAPA
+   NELASĪTIE PAZIŅOJUMI
 ================================ */
-$currentPage = basename($_SERVER['PHP_SELF'] ?? 'student.php');
+$unreadCount = 0;
 
-function studentNavActive(array $pages, string $currentPage): string
+if (isset($_SESSION["lietotajs_id"])) {
+    $userId = (int)$_SESSION["lietotajs_id"];
+
+    $sqlUnread = "
+        SELECT COUNT(*) AS total
+        FROM cm_notifications
+        WHERE user_id = ?
+          AND is_read = 0
+    ";
+
+    $stmtUnread = $savienojums->prepare($sqlUnread);
+
+    if ($stmtUnread) {
+        $stmtUnread->bind_param("i", $userId);
+        $stmtUnread->execute();
+
+        $resultUnread = $stmtUnread->get_result();
+        $rowUnread = $resultUnread->fetch_assoc();
+
+        $unreadCount = (int)($rowUnread['total'] ?? 0);
+
+        $stmtUnread->close();
+    }
+}
+
+$pageTitle = $title ?? 'Skolotāja panelis';
+$pageName  = $lapa ?? 'Skolotāja panelis';
+
+$currentPage = basename($_SERVER['PHP_SELF'] ?? 'teacher.php');
+$currentUrl  = $_SERVER['REQUEST_URI'] ?? '';
+
+function teacherNavActive(array $pages, string $currentPage): string
 {
     return in_array($currentPage, $pages, true) ? 'is-active' : '';
 }
 
 /* ===============================
+   SAITES
+================================ */
+$dashboardUrl      = BASE_URL . 'dashboards/teacher.php';
+$notificationsUrl = BASE_URL . 'dashboards/notifications.php';
+
+$lessonsUrl        = BASE_URL . 'teacher/lesson_plans.php';
+$activitiesUrl     = BASE_URL . 'teacher/activities.php';
+$applicationsUrl   = BASE_URL . 'teacher/applications.php';
+$clubUrl           = BASE_URL . 'teacher/club.php';
+
+$profileUrl = BASE_URL . 'profile.php';
+
+$homeUrl           = BASE_URL . 'auth/logout.php?redirect=home';
+$logoutUrl         = BASE_URL . 'auth/logout.php';
+
+$teacherDropdownActive = (
+    str_contains($currentUrl, '/teacher/lesson_plans.php') ||
+    str_contains($currentUrl, '/teacher/activities.php') ||
+    str_contains($currentUrl, '/teacher/applications.php') ||
+    str_contains($currentUrl, '/teacher/club.php')
+);
+
+/* ===============================
    AVATAR INICIĀĻI
 ================================ */
-$initials = 'C';
+$initials = 'S';
 
 if ($username !== '') {
     $parts = preg_split('/\s+/', $username);
@@ -71,14 +104,14 @@ if ($username !== '') {
 <html lang="lv">
 <head>
     <meta charset="UTF-8">
+    <title><?= htmlspecialchars($pageTitle); ?></title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($title ?? 'Ceļameklētāja panelis'); ?></title>
 
     <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 
     <style>
-        .student-header {
+        .teacher-header {
             position: sticky;
             top: 0;
             z-index: 1500;
@@ -88,7 +121,7 @@ if ($username !== '') {
             box-shadow: 0 10px 30px rgba(16, 24, 40, 0.05);
         }
 
-        .student-nav-container {
+        .teacher-nav-container {
             min-height: 76px;
             display: flex;
             align-items: center;
@@ -96,7 +129,7 @@ if ($username !== '') {
             gap: 1rem;
         }
 
-        .student-brand {
+        .teacher-brand {
             display: inline-flex;
             align-items: center;
             gap: .75rem;
@@ -106,7 +139,7 @@ if ($username !== '') {
             font-weight: 1000;
         }
 
-        .student-brand-logo {
+        .teacher-brand-logo {
             width: 48px;
             height: 48px;
             display: grid;
@@ -118,26 +151,26 @@ if ($username !== '') {
             overflow: hidden;
         }
 
-        .student-brand-logo img {
+        .teacher-brand-logo img {
             width: 38px;
             height: 38px;
             object-fit: contain;
         }
 
-        .student-brand-text {
+        .teacher-brand-text {
             display: flex;
             flex-direction: column;
             line-height: 1.1;
             min-width: 0;
         }
 
-        .student-brand-text strong {
+        .teacher-brand-text strong {
             font-size: 1.05rem;
             color: #173f84;
             white-space: nowrap;
         }
 
-        .student-brand-text span {
+        .teacher-brand-text span {
             max-width: 180px;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -148,15 +181,15 @@ if ($username !== '') {
             margin-top: .12rem;
         }
 
-        .student-nav {
+        .teacher-nav {
             display: flex;
             align-items: center;
             gap: .35rem;
             margin-left: auto;
         }
 
-        .student-nav a,
-        .student-club-toggle {
+        .teacher-nav a,
+        .teacher-dropdown-toggle {
             display: inline-flex;
             align-items: center;
             gap: .5rem;
@@ -173,47 +206,39 @@ if ($username !== '') {
             cursor: pointer;
         }
 
-        .student-nav a i,
-        .student-club-toggle i {
+        .teacher-nav a i,
+        .teacher-dropdown-toggle i {
             color: #1e4fa1;
         }
 
-        .student-nav a:hover,
-        .student-club-toggle:hover {
+        .teacher-nav a:hover,
+        .teacher-dropdown-toggle:hover {
             background: #eef3ff;
             color: #173f84;
             transform: translateY(-1px);
         }
 
-        .student-nav a.is-active,
-        .student-club-toggle.is-active {
+        .teacher-nav a.is-active,
+        .teacher-dropdown-toggle.is-active {
             background: linear-gradient(135deg, #1e4fa1, #173f84);
             color: #fff;
             box-shadow: 0 12px 26px rgba(23, 63, 132, 0.18);
         }
 
-        .student-nav a.is-active i,
-        .student-club-toggle.is-active i {
+        .teacher-nav a.is-active i,
+        .teacher-dropdown-toggle.is-active i {
             color: #f4c430;
         }
 
-        .student-nav-icon-only {
-            width: 44px;
-            height: 44px;
-            justify-content: center;
-            padding: 0 !important;
+        .teacher-dropdown {
             position: relative;
         }
 
-        .student-club-dropdown {
-            position: relative;
-        }
-
-        .student-club-menu {
+        .teacher-dropdown-menu {
             position: absolute;
             top: calc(100% + .75rem);
             left: 0;
-            min-width: 245px;
+            min-width: 255px;
             padding: .7rem;
             border-radius: 1.25rem;
             background: #fff;
@@ -223,22 +248,23 @@ if ($username !== '') {
             visibility: hidden;
             transform: translateY(8px) scale(.98);
             transition: .18s ease;
+            z-index: 2400;
         }
 
-        .student-club-menu.is-open {
+        .teacher-dropdown-menu.is-open {
             opacity: 1;
             visibility: visible;
             transform: translateY(0) scale(1);
         }
 
-        .student-club-menu a {
+        .teacher-dropdown-menu a {
             display: flex;
             width: 100%;
             border-radius: .9rem;
             padding: .8rem .85rem;
         }
 
-        .student-club-menu a:hover {
+        .teacher-dropdown-menu a:hover {
             background: #eef3ff;
         }
 
@@ -247,18 +273,18 @@ if ($username !== '') {
             transition: .2s ease;
         }
 
-        .student-club-toggle.is-open .dropdown-arrow {
+        .teacher-dropdown-toggle.is-open .dropdown-arrow {
             transform: rotate(180deg);
         }
 
-        .student-right {
+        .teacher-right {
             display: flex;
             align-items: center;
             gap: .7rem;
             position: relative;
         }
 
-        .student-quick-home {
+        .teacher-quick-home {
             display: inline-flex;
             align-items: center;
             gap: .45rem;
@@ -272,16 +298,66 @@ if ($username !== '') {
             white-space: nowrap;
         }
 
-        .student-quick-home:hover {
+        .teacher-quick-home:hover {
             background: #dfeaff;
             transform: translateY(-1px);
         }
 
-        .student-user-menu {
+        .teacher-notification {
+            position: relative;
+            width: 44px;
+            height: 44px;
+            display: grid;
+            place-items: center;
+            text-decoration: none;
+            border-radius: 50%;
+            background: #eef3ff;
+            color: #173f84;
+            font-size: 1.1rem;
+            transition: .2s ease;
+            flex-shrink: 0;
+        }
+
+        .teacher-notification:hover {
+            background: #dfeaff;
+            transform: translateY(-1px);
+        }
+
+        .teacher-notification i {
+            color: #173f84;
+        }
+
+        .teacher-notification.is-active {
+            background: #173f84;
+        }
+
+        .teacher-notification.is-active i {
+            color: #f4c430;
+        }
+
+        .teacher-notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
+            border-radius: 999px;
+            background: #d62828;
+            color: #fff;
+            font-size: .72rem;
+            font-weight: 1000;
+            display: grid;
+            place-items: center;
+            border: 2px solid #fff;
+            line-height: 1;
+        }
+
+        .teacher-user-menu {
             position: relative;
         }
 
-        .student-avatar-btn {
+        .teacher-avatar-btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -291,7 +367,7 @@ if ($username !== '') {
             padding: 0;
         }
 
-        .student-avatar {
+        .teacher-avatar {
             width: 44px;
             height: 44px;
             border-radius: 50%;
@@ -305,12 +381,12 @@ if ($username !== '') {
             transition: .2s ease;
         }
 
-        .student-avatar-btn:hover .student-avatar {
+        .teacher-avatar-btn:hover .teacher-avatar {
             transform: translateY(-2px);
             box-shadow: 0 16px 34px rgba(244, 196, 48, 0.32);
         }
 
-        .student-dropdown {
+        .teacher-dropdown-profile {
             position: absolute;
             top: calc(100% + .85rem);
             right: 0;
@@ -324,15 +400,16 @@ if ($username !== '') {
             visibility: hidden;
             transform: translateY(8px) scale(.98);
             transition: .18s ease;
+            z-index: 3000;
         }
 
-        .student-user-menu.open .student-dropdown {
+        .teacher-user-menu.open .teacher-dropdown-profile {
             opacity: 1;
             visibility: visible;
             transform: translateY(0) scale(1);
         }
 
-        .student-dropdown-head {
+        .teacher-dropdown-head {
             display: flex;
             align-items: center;
             gap: .75rem;
@@ -342,7 +419,7 @@ if ($username !== '') {
             margin-bottom: .5rem;
         }
 
-        .student-dropdown-avatar {
+        .teacher-dropdown-avatar {
             width: 42px;
             height: 42px;
             border-radius: 50%;
@@ -354,20 +431,20 @@ if ($username !== '') {
             flex-shrink: 0;
         }
 
-        .student-dropdown-name {
+        .teacher-dropdown-name {
             font-weight: 1000;
             color: #101828;
             line-height: 1.2;
         }
 
-        .student-dropdown-role {
+        .teacher-dropdown-role {
             font-size: .86rem;
             color: #667085;
             font-weight: 800;
             margin-top: .1rem;
         }
 
-        .student-dropdown-link {
+        .teacher-dropdown-link {
             display: flex;
             align-items: center;
             gap: .7rem;
@@ -379,31 +456,31 @@ if ($username !== '') {
             transition: .2s ease;
         }
 
-        .student-dropdown-link i {
+        .teacher-dropdown-link i {
             width: 20px;
             color: #1e4fa1;
             text-align: center;
         }
 
-        .student-dropdown-link:hover {
+        .teacher-dropdown-link:hover {
             background: #eef3ff;
             color: #173f84;
         }
 
-        .student-dropdown-link--danger {
+        .teacher-dropdown-link--danger {
             color: #b42318;
         }
 
-        .student-dropdown-link--danger i {
+        .teacher-dropdown-link--danger i {
             color: #b42318;
         }
 
-        .student-dropdown-link--danger:hover {
+        .teacher-dropdown-link--danger:hover {
             background: #fff0f0;
             color: #b42318;
         }
 
-        .student-menu-btn {
+        .teacher-menu-btn {
             display: none;
             width: 44px;
             height: 44px;
@@ -415,7 +492,7 @@ if ($username !== '') {
             font-size: 1.1rem;
         }
 
-        .student-mobile-backdrop {
+        .teacher-mobile-backdrop {
             position: fixed;
             inset: 0;
             background: rgba(15, 23, 42, 0.42);
@@ -425,25 +502,25 @@ if ($username !== '') {
             transition: .2s ease;
         }
 
-        .student-mobile-backdrop.show {
+        .teacher-mobile-backdrop.show {
             opacity: 1;
             visibility: visible;
         }
 
-        @media (max-width: 1120px) {
-            .student-brand-text span,
-            .student-quick-home span {
+        @media (max-width: 1180px) {
+            .teacher-brand-text span,
+            .teacher-quick-home span {
                 display: none;
             }
         }
 
         @media (max-width: 980px) {
-            .student-menu-btn {
+            .teacher-menu-btn {
                 display: grid;
                 place-items: center;
             }
 
-            .student-nav {
+            .teacher-nav {
                 position: fixed;
                 top: 86px;
                 right: 1rem;
@@ -464,33 +541,21 @@ if ($username !== '') {
                 transition: .2s ease;
             }
 
-            .student-nav.is-open {
+            .teacher-nav.is-open {
                 opacity: 1;
                 visibility: visible;
                 transform: translateY(0);
             }
 
-            .student-nav a,
-            .student-club-toggle {
+            .teacher-nav a,
+            .teacher-dropdown-toggle {
                 justify-content: flex-start;
                 border-radius: 1rem;
                 padding: .95rem 1rem;
                 width: 100%;
             }
 
-            .student-nav-icon-only {
-                width: auto;
-                height: auto;
-                justify-content: flex-start;
-                padding: .95rem 1rem !important;
-            }
-
-            .student-nav-icon-only::after {
-                content: "Paziņojumi";
-                margin-left: .5rem;
-            }
-
-            .student-club-menu {
+            .teacher-dropdown-menu {
                 position: static;
                 min-width: 100%;
                 margin-top: .35rem;
@@ -503,7 +568,7 @@ if ($username !== '') {
                 transform: none;
             }
 
-            .student-club-menu.is-open {
+            .teacher-dropdown-menu.is-open {
                 display: grid;
                 gap: .25rem;
             }
@@ -514,24 +579,31 @@ if ($username !== '') {
         }
 
         @media (max-width: 560px) {
-            .student-nav-container {
+            .teacher-nav-container {
                 min-height: 68px;
             }
 
-            .student-brand-text {
+            .teacher-brand-text {
                 display: none;
             }
 
-            .student-brand-logo {
+            .teacher-brand-logo {
                 width: 44px;
                 height: 44px;
             }
 
-            .student-quick-home {
+            .teacher-notification,
+            .teacher-avatar,
+            .teacher-menu-btn {
+                width: 42px;
+                height: 42px;
+            }
+
+            .teacher-quick-home {
                 display: none;
             }
 
-            .student-dropdown {
+            .teacher-dropdown-profile {
                 position: fixed;
                 top: 76px;
                 right: 1rem;
@@ -544,132 +616,137 @@ if ($username !== '') {
 
 <body>
 
-<header class="student-header">
-    <div class="container student-nav-container">
+<header class="teacher-header">
+    <div class="container teacher-nav-container">
 
-        <a href="<?= $studentPanelUrl ?>" class="student-brand">
-            <span class="student-brand-logo">
+        <a href="<?= $dashboardUrl ?>" class="teacher-brand">
+            <span class="teacher-brand-logo">
                 <img src="<?= BASE_URL ?>assets/images/logos/logo.png" alt="Ceļa meklētāji logo">
             </span>
 
-            <span class="student-brand-text">
-                <strong>Ceļameklētāja panelis</strong>
-                <span><?= htmlspecialchars($lapa ?? 'Ceļa meklētāji') ?></span>
+            <span class="teacher-brand-text">
+                <strong>Skolotāja panelis</strong>
+                <span><?= htmlspecialchars($pageName); ?></span>
             </span>
         </a>
 
-        <nav class="student-nav" id="studentNav" aria-label="Ceļameklētāja navigācija">
+        <nav class="teacher-nav" id="teacherNav" aria-label="Skolotāja navigācija">
 
-            <a href="<?= $studentPanelUrl ?>" class="<?= studentNavActive(['student.php'], $currentPage) ?>">
+            <a href="<?= $dashboardUrl ?>" class="<?= teacherNavActive(['teacher.php'], $currentPage); ?>">
                 <i class="fas fa-gauge-high"></i>
                 <span>Panelis</span>
             </a>
 
-            <div class="student-club-dropdown" id="studentClubDropdown">
+            <div class="teacher-dropdown" id="teacherWorkDropdown">
                 <button
-                    class="student-club-toggle <?= studentNavActive(['lessons.php', 'applications.php', 'events.php', 'calendar.php'], $currentPage) ?>"
-                    id="studentClubToggle"
+                    class="teacher-dropdown-toggle <?= $teacherDropdownActive ? 'is-active' : ''; ?>"
                     type="button"
+                    id="teacherWorkToggle"
                     aria-haspopup="true"
                     aria-expanded="false"
                 >
-                    <i class="fas fa-campground"></i>
-                    <span>Mans klubs</span>
+                    <i class="fas fa-chalkboard-user"></i>
+                    <span>Mans darbs</span>
                     <i class="fas fa-chevron-down dropdown-arrow"></i>
                 </button>
 
-                <div class="student-club-menu" id="studentClubMenu">
-                    <a href="<?= $studentCalendarUrl ?>" class="<?= studentNavActive(['calendar.php'], $currentPage) ?>">
-                        <i class="fas fa-calendar-week"></i>
-                        <span>Kalendārs</span>
+                <div class="teacher-dropdown-menu" id="teacherWorkMenu">
+                    <a href="<?= $clubUrl ?>" class="<?= teacherNavActive(['club.php'], $currentPage); ?>">
+                        <i class="fas fa-circle-info"></i>
+                        <span>Mans klubs</span>
                     </a>
 
-                    <a href="<?= $studentLessonsUrl ?>" class="<?= studentNavActive(['lessons.php'], $currentPage) ?>">
-                        <i class="fas fa-book-open"></i>
-                        <span>Nodarbības</span>
-                    </a>
-
-                    <a href="<?= $studentApplicationsUrl ?>" class="<?= studentNavActive(['applications.php'], $currentPage) ?>">
+                    <a href="<?= $lessonsUrl ?>" class="<?= teacherNavActive(['lesson_plans.php'], $currentPage); ?>">
                         <i class="fas fa-clipboard-list"></i>
-                        <span>Mani pieteikumi</span>
+                        <span>Nodarbību plāni</span>
                     </a>
 
-                    <a href="<?= $studentEventsUrl ?>" class="<?= studentNavActive(['events.php'], $currentPage) ?>">
+                    <a href="<?= $activitiesUrl ?>" class="<?= teacherNavActive(['activities.php'], $currentPage); ?>">
                         <i class="fas fa-calendar-days"></i>
                         <span>Pasākumi</span>
+                    </a>
+
+                    <a href="<?= $applicationsUrl ?>" class="<?= teacherNavActive(['applications.php'], $currentPage); ?>">
+                        <i class="fas fa-file-signature"></i>
+                        <span>Pieteikumi</span>
                     </a>
                 </div>
             </div>
 
-            <a href="<?= $studentNewsUrl ?>" class="<?= studentNavActive(['news.php'], $currentPage) ?>">
-                <i class="fas fa-newspaper"></i>
-                <span>Jaunumi</span>
-            </a>
-
-            <a
-                href="<?= $notificationsUrl ?>"
-                class="student-nav-icon-only <?= studentNavActive(['notifications.php'], $currentPage) ?>"
-                title="Paziņojumi"
-                aria-label="Paziņojumi"
-            >
-                <i class="fas fa-bell"></i>
-            </a>
-
         </nav>
 
-        <div class="student-right">
+        <div class="teacher-right">
 
-            <a href="<?= $homeUrl ?>" class="student-quick-home">
+            <a href="<?= $homeUrl ?>" class="teacher-quick-home">
                 <i class="fas fa-arrow-left"></i>
                 <span>Uz sākumlapu</span>
             </a>
 
-            <div class="student-user-menu" id="studentUserMenu">
+            <a href="<?= $notificationsUrl ?>"
+               class="teacher-notification <?= str_contains($currentUrl, '/dashboards/notifications.php') ? 'is-active' : ''; ?>"
+               title="Paziņojumi"
+               aria-label="Paziņojumi">
+                <i class="fas fa-bell"></i>
+
+                <?php if ($unreadCount > 0): ?>
+                    <span class="teacher-notification-badge">
+                        <?= $unreadCount > 99 ? '99+' : $unreadCount ?>
+                    </span>
+                <?php endif; ?>
+            </a>
+
+            <div class="teacher-user-menu" id="teacherUserMenu">
+
                 <button
-                    class="student-avatar-btn"
-                    id="studentAvatarBtn"
+                    class="teacher-avatar-btn"
+                    id="teacherAvatarBtn"
                     type="button"
                     aria-label="Atvērt lietotāja izvēlni"
                     aria-expanded="false"
                 >
-                    <span class="student-avatar">
+                    <span class="teacher-avatar">
                         <?= htmlspecialchars($initials); ?>
                     </span>
                 </button>
 
-                <div class="student-dropdown">
-                    <div class="student-dropdown-head">
-                        <span class="student-dropdown-avatar">
+                <div class="teacher-dropdown-profile">
+                    <div class="teacher-dropdown-head">
+                        <span class="teacher-dropdown-avatar">
                             <?= htmlspecialchars($initials); ?>
                         </span>
 
                         <div>
-                            <div class="student-dropdown-name">
-                                <?= htmlspecialchars($username ?: 'Ceļameklētājs'); ?>
+                            <div class="teacher-dropdown-name">
+                                <?= htmlspecialchars($username ?: 'Skolotājs'); ?>
                             </div>
 
-                            <div class="student-dropdown-role">
-                                <?= htmlspecialchars($userRole ?: 'Ceļameklētājs'); ?>
+                            <div class="teacher-dropdown-role">
+                                <?= htmlspecialchars($userRole ?: 'Skolotājs'); ?>
                             </div>
                         </div>
                     </div>
 
-                    <a href="<?= $studentProfileUrl ?>" class="student-dropdown-link">
-                        <i class="fas fa-user-gear"></i>
-                        <span>Mans profils</span>
+                    <a href="<?= $profileUrl ?>" class="teacher-dropdown-link">
+                        <i class="fas fa-user-pen"></i>
+                        <span>Labot profilu</span>
                     </a>
 
-                    <a href="<?= $notificationsUrl ?>" class="student-dropdown-link">
+                    <a href="<?= $notificationsUrl ?>" class="teacher-dropdown-link">
                         <i class="fas fa-bell"></i>
-                        <span>Paziņojumi</span>
+                        <span>
+                            Paziņojumi
+                            <?php if ($unreadCount > 0): ?>
+                                (<?= $unreadCount > 99 ? '99+' : $unreadCount ?>)
+                            <?php endif; ?>
+                        </span>
                     </a>
 
-                    <a href="<?= $homeUrl ?>" class="student-dropdown-link">
+                    <a href="<?= $homeUrl ?>" class="teacher-dropdown-link">
                         <i class="fas fa-house"></i>
                         <span>Uz sākumlapu</span>
                     </a>
 
-                    <a href="<?= $logoutUrl ?>" class="student-dropdown-link student-dropdown-link--danger">
+                    <a href="<?= $logoutUrl ?>" class="teacher-dropdown-link teacher-dropdown-link--danger">
                         <i class="fas fa-right-from-bracket"></i>
                         <span>Iziet</span>
                     </a>
@@ -677,8 +754,8 @@ if ($username !== '') {
             </div>
 
             <button
-                id="studentMenuBtn"
-                class="student-menu-btn"
+                id="teacherMenuBtn"
+                class="teacher-menu-btn"
                 type="button"
                 aria-label="Atvērt izvēlni"
                 aria-expanded="false"
@@ -690,27 +767,27 @@ if ($username !== '') {
     </div>
 </header>
 
-<div class="student-mobile-backdrop" id="studentNavBackdrop"></div>
+<div class="teacher-mobile-backdrop" id="teacherNavBackdrop"></div>
 
 <script>
 (function () {
-    const menuBtn = document.getElementById('studentMenuBtn');
-    const nav = document.getElementById('studentNav');
-    const backdrop = document.getElementById('studentNavBackdrop');
+    const menuBtn = document.getElementById('teacherMenuBtn');
+    const nav = document.getElementById('teacherNav');
+    const backdrop = document.getElementById('teacherNavBackdrop');
 
-    const avatarBtn = document.getElementById('studentAvatarBtn');
-    const userMenu = document.getElementById('studentUserMenu');
+    const avatarBtn = document.getElementById('teacherAvatarBtn');
+    const userMenu = document.getElementById('teacherUserMenu');
 
-    const clubDropdown = document.getElementById('studentClubDropdown');
-    const clubToggle = document.getElementById('studentClubToggle');
-    const clubMenu = document.getElementById('studentClubMenu');
+    const workDropdown = document.getElementById('teacherWorkDropdown');
+    const workToggle = document.getElementById('teacherWorkToggle');
+    const workMenu = document.getElementById('teacherWorkMenu');
 
-    function closeClubMenu() {
-        if (!clubToggle || !clubMenu) return;
+    function closeWorkMenu() {
+        if (!workToggle || !workMenu) return;
 
-        clubToggle.classList.remove('is-open');
-        clubMenu.classList.remove('is-open');
-        clubToggle.setAttribute('aria-expanded', 'false');
+        workToggle.classList.remove('is-open');
+        workMenu.classList.remove('is-open');
+        workToggle.setAttribute('aria-expanded', 'false');
     }
 
     function closeUserMenu() {
@@ -745,16 +822,23 @@ if ($username !== '') {
         menuBtn.setAttribute('aria-expanded', 'false');
         menuBtn.setAttribute('aria-label', 'Atvērt izvēlni');
 
-        closeClubMenu();
+        closeWorkMenu();
     }
 
     menuBtn?.addEventListener('click', function () {
-        nav.classList.contains('is-open') ? closeMenu() : openMenu();
+        if (!nav) return;
+
+        if (nav.classList.contains('is-open')) {
+            closeMenu();
+        } else {
+            openMenu();
+        }
     });
 
     backdrop?.addEventListener('click', function () {
         closeMenu();
         closeUserMenu();
+        closeWorkMenu();
     });
 
     avatarBtn?.addEventListener('click', function (event) {
@@ -764,17 +848,25 @@ if ($username !== '') {
         avatarBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
 
         closeMenu();
-        closeClubMenu();
+        closeWorkMenu();
     });
 
-    clubToggle?.addEventListener('click', function (event) {
+    workToggle?.addEventListener('click', function (event) {
         event.stopPropagation();
 
-        const isOpen = clubMenu.classList.toggle('is-open');
-        clubToggle.classList.toggle('is-open', isOpen);
-        clubToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        const isOpen = workMenu.classList.toggle('is-open');
+        workToggle.classList.toggle('is-open', isOpen);
+        workToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
 
         closeUserMenu();
+    });
+
+    nav?.querySelectorAll('a').forEach(function (link) {
+        link.addEventListener('click', function () {
+            closeMenu();
+            closeUserMenu();
+            closeWorkMenu();
+        });
     });
 
     document.addEventListener('click', function (event) {
@@ -782,22 +874,16 @@ if ($username !== '') {
             closeUserMenu();
         }
 
-        if (clubDropdown && !clubDropdown.contains(event.target)) {
-            closeClubMenu();
+        if (workDropdown && !workDropdown.contains(event.target)) {
+            closeWorkMenu();
         }
-    });
-
-    nav?.querySelectorAll('a').forEach(function (link) {
-        link.addEventListener('click', function () {
-            closeMenu();
-        });
     });
 
     document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') {
             closeMenu();
-            closeClubMenu();
             closeUserMenu();
+            closeWorkMenu();
         }
     });
 })();

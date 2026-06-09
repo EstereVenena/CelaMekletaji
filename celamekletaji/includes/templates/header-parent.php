@@ -50,6 +50,8 @@ function parentNavActive(array $pages, string $currentPage): string
    SAITES
 ================================ */
 $dashboardUrl           = BASE_URL . 'dashboards/parent.php';
+$notificationsUrl       = BASE_URL . 'dashboards/notifications.php';
+
 $childrenUrl            = BASE_URL . 'parent/children/manage.php';
 
 /*
@@ -189,6 +191,14 @@ $homeUrl                = BASE_URL . 'auth/logout.php?redirect=home';
 
         .parent-nav a.is-active i {
             color: #f4c430;
+        }
+
+        .parent-nav-icon-only {
+            width: 44px;
+            height: 44px;
+            justify-content: center;
+            padding: 0 !important;
+            position: relative;
         }
 
         .parent-right {
@@ -370,6 +380,21 @@ $homeUrl                = BASE_URL . 'auth/logout.php?redirect=home';
             visibility: visible;
         }
 
+        @media (max-width: 1180px) {
+            .parent-nav a span {
+                display: none;
+            }
+
+            .parent-nav a {
+                padding: .75rem .82rem;
+            }
+
+            .parent-nav-icon-only {
+                width: 44px;
+                padding: 0 !important;
+            }
+        }
+
         @media (max-width: 1060px) {
             .parent-brand-text span {
                 display: none;
@@ -417,6 +442,22 @@ $homeUrl                = BASE_URL . 'auth/logout.php?redirect=home';
                 justify-content: flex-start;
                 border-radius: 1rem;
                 padding: .95rem 1rem;
+            }
+
+            .parent-nav a span {
+                display: inline;
+            }
+
+            .parent-nav-icon-only {
+                width: auto;
+                height: auto;
+                justify-content: flex-start;
+                padding: .95rem 1rem !important;
+            }
+
+            .parent-nav-icon-only::after {
+                content: "Paziņojumi";
+                margin-left: .5rem;
             }
 
             body.nav-lock {
@@ -488,7 +529,16 @@ $homeUrl                = BASE_URL . 'auth/logout.php?redirect=home';
 
             <a href="<?= $availableActivitiesUrl ?>" class="<?= parentNavActive(['available-activities.php'], $currentPage) ?>">
                 <i class="fas fa-list-check"></i>
-                <span>Pieejamās aktivitātes</span>
+                <span>Aktivitātes</span>
+            </a>
+
+            <a
+                href="<?= $notificationsUrl ?>"
+                class="parent-nav-icon-only <?= parentNavActive(['notifications.php'], $currentPage) ?>"
+                title="Paziņojumi"
+                aria-label="Paziņojumi"
+            >
+                <i class="fas fa-bell"></i>
             </a>
 
         </nav>
@@ -548,7 +598,12 @@ $homeUrl                = BASE_URL . 'auth/logout.php?redirect=home';
 
                     <a href="<?= $availableActivitiesUrl ?>" class="parent-dropdown-link">
                         <i class="fas fa-list-check"></i>
-                        <span>Pieejamās aktivitātes</span>
+                        <span>Aktivitātes</span>
+                    </a>
+
+                    <a href="<?= $notificationsUrl ?>" class="parent-dropdown-link">
+                        <i class="fas fa-bell"></i>
+                        <span>Paziņojumi</span>
                     </a>
 
                     <a href="<?= $homeUrl ?>" class="parent-dropdown-link">

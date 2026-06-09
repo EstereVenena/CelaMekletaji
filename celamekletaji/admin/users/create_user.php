@@ -16,7 +16,13 @@ if (!isset($_SESSION["lietotajs_id"]) || ($_SESSION["loma"] ?? "") !== "admin") 
 $success = "";
 $error = "";
 
-$availableRoles = ["admin", "Vecāks", "Direktors", "Ceļameklētājs"];
+$availableRoles = [
+    "admin",
+    "Direktors",
+    "Skolotājs",
+    "Vecāks",
+    "Ceļameklētājs"
+];
 $availableStatuses = ["aktīvs", "gaida", "dzēsts"];
 
 $formData = [

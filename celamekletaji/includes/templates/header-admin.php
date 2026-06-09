@@ -4,6 +4,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once __DIR__ . '/../config/app.php';
+require_once __DIR__ . '/../config/database.php';
 
 /* ===============================
    PIEKĻUVE TIKAI ADMINAM
@@ -15,6 +16,34 @@ if (!isset($_SESSION["lietotajs_id"]) || ($_SESSION["loma"] ?? '') !== 'admin') 
 
 $username = trim($_SESSION["lietotajvards"] ?? 'Administrators');
 $userRole = trim($_SESSION["loma"] ?? 'admin');
+
+/* ===============================
+   NELASĪTIE PAZIŅOJUMI
+================================ */
+$unreadCount = 0;
+
+if (isset($_SESSION["lietotajs_id"])) {
+    $userId = (int)$_SESSION["lietotajs_id"];
+
+    $sqlUnread = "
+        SELECT COUNT(*) AS total
+        FROM cm_notifications
+        WHERE user_id = ?
+        AND is_read = 0
+    ";
+
+    $stmtUnread = $savienojums->prepare($sqlUnread);
+
+    if ($stmtUnread) {
+        $stmtUnread->bind_param("i", $userId);
+        $stmtUnread->execute();
+
+        $resultUnread = $stmtUnread->get_result();
+        $rowUnread = $resultUnread->fetch_assoc();
+
+        $unreadCount = (int)($rowUnread['total'] ?? 0);
+    }
+}
 
 /* ===============================
    INICIĀĻI
@@ -46,14 +75,16 @@ function adminNavActive(string $needle, string $currentPath): string
 /* ===============================
    URL
 ================================ */
-$dashboardUrl = BASE_URL . 'dashboards/admin.php';
-$newsUrl      = BASE_URL . 'admin/news/news.php';
-$clubsUrl     = BASE_URL . 'admin/clubs/clubs.php';
-$galleryUrl   = BASE_URL . 'admin/gallery/gallery.php';
-$usersUrl     = BASE_URL . 'admin/users/users_manage.php';
-$profileUrl   = BASE_URL . 'profile.php';
-$homeUrl      = BASE_URL . 'auth/logout.php?redirect=home';
-$logoutUrl    = BASE_URL . 'auth/logout.php';
+$dashboardUrl            = BASE_URL . 'dashboards/admin.php';
+$notificationsUrl        = BASE_URL . 'dashboards/notifications.php';
+$createNotificationUrl   = BASE_URL . 'admin/notifications/create_notification.php';
+$newsUrl                 = BASE_URL . 'admin/news/news.php';
+$clubsUrl                = BASE_URL . 'admin/clubs/clubs.php';
+$galleryUrl              = BASE_URL . 'admin/gallery/gallery.php';
+$usersUrl                = BASE_URL . 'admin/users/users_manage.php';
+$profileUrl              = BASE_URL . 'profile.php';
+$homeUrl                 = BASE_URL . 'auth/logout.php?redirect=home';
+$logoutUrl               = BASE_URL . 'auth/logout.php';
 ?>
 <!DOCTYPE html>
 <html lang="lv">
@@ -149,6 +180,7 @@ $logoutUrl    = BASE_URL . 'auth/logout.php';
             font-weight: 900;
             color: #344054;
             transition: .2s ease;
+            white-space: nowrap;
         }
 
         .admin-nav a i {
@@ -189,11 +221,63 @@ $logoutUrl    = BASE_URL . 'auth/logout.php';
             color: #173f84;
             font-weight: 900;
             transition: .2s ease;
+            white-space: nowrap;
         }
 
         .admin-home:hover {
             background: #dfeaff;
             transform: translateY(-1px);
+        }
+
+        .admin-notification {
+            position: relative;
+            width: 44px;
+            height: 44px;
+            display: grid;
+            place-items: center;
+            text-decoration: none;
+            border-radius: 50%;
+            background: #eef3ff;
+            color: #173f84;
+            font-size: 1.1rem;
+            transition: .2s ease;
+            flex-shrink: 0;
+        }
+
+        .admin-notification:hover {
+            background: #dfeaff;
+            transform: translateY(-1px);
+        }
+
+        .admin-notification i {
+            color: #173f84;
+        }
+
+        .admin-notification.is-active {
+            background: #173f84;
+            color: #fff;
+        }
+
+        .admin-notification.is-active i {
+            color: #f4c430;
+        }
+
+        .admin-notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
+            border-radius: 999px;
+            background: #d62828;
+            color: #fff;
+            font-size: .72rem;
+            font-weight: 1000;
+            display: grid;
+            place-items: center;
+            border: 2px solid #fff;
+            line-height: 1;
         }
 
         .admin-avatar {
@@ -209,6 +293,7 @@ $logoutUrl    = BASE_URL . 'auth/logout.php';
             border: 2px solid rgba(244, 196, 48, 0.65);
             box-shadow: 0 10px 24px rgba(23, 63, 132, 0.18);
             transition: .2s ease;
+            flex-shrink: 0;
         }
 
         .admin-avatar:hover {
@@ -220,7 +305,7 @@ $logoutUrl    = BASE_URL . 'auth/logout.php';
             position: absolute;
             top: calc(100% + .8rem);
             right: 0;
-            width: 260px;
+            width: 280px;
             background: #fff;
             border: 1px solid rgba(23, 63, 132, 0.10);
             border-radius: 1.25rem;
@@ -252,6 +337,7 @@ $logoutUrl    = BASE_URL . 'auth/logout.php';
             background: #173f84;
             color: #f4c430;
             font-weight: 1000;
+            flex-shrink: 0;
         }
 
         .admin-dropdown-name {
@@ -311,6 +397,7 @@ $logoutUrl    = BASE_URL . 'auth/logout.php';
             color: #f4c430;
             cursor: pointer;
             font-size: 1.1rem;
+            flex-shrink: 0;
         }
 
         .admin-backdrop {
@@ -326,6 +413,13 @@ $logoutUrl    = BASE_URL . 'auth/logout.php';
         .admin-backdrop.show {
             opacity: 1;
             visibility: visible;
+        }
+
+        @media (max-width: 1120px) {
+            .admin-nav a {
+                padding: .65rem .75rem;
+                font-size: .92rem;
+            }
         }
 
         @media (max-width: 980px) {
@@ -370,6 +464,7 @@ $logoutUrl    = BASE_URL . 'auth/logout.php';
                 justify-content: flex-start;
                 border-radius: 1rem;
                 padding: .95rem 1rem;
+                font-size: 1rem;
             }
 
             .admin-menu-btn {
@@ -385,11 +480,26 @@ $logoutUrl    = BASE_URL . 'auth/logout.php';
 
             .admin-container {
                 min-height: 68px;
+                gap: .6rem;
+                padding: 0 .8rem;
             }
 
             .admin-logo-icon {
                 width: 44px;
                 height: 44px;
+            }
+
+            .admin-home,
+            .admin-notification,
+            .admin-avatar,
+            .admin-menu-btn {
+                width: 42px;
+                height: 42px;
+            }
+
+            .admin-home {
+                padding: 0;
+                justify-content: center;
             }
 
             .admin-dropdown {
@@ -443,12 +553,30 @@ $logoutUrl    = BASE_URL . 'auth/logout.php';
                 <i class="fas fa-users-gear"></i>
                 Lietotāji
             </a>
+
+            <a href="<?= $createNotificationUrl ?>" class="<?= adminNavActive('/admin/notifications/', $currentPath) ?>">
+                <i class="fas fa-paper-plane"></i>
+                Izveidot paziņojumu
+            </a>
         </nav>
 
         <div class="admin-right">
             <a href="<?= $homeUrl ?>" class="admin-home">
                 <i class="fas fa-house"></i>
                 <span>Sākums</span>
+            </a>
+
+            <a href="<?= $notificationsUrl ?>"
+               class="admin-notification <?= adminNavActive('/dashboards/notifications.php', $currentPath) ?>"
+               title="Paziņojumi"
+               aria-label="Paziņojumi">
+                <i class="fas fa-bell"></i>
+
+                <?php if ($unreadCount > 0): ?>
+                    <span class="admin-notification-badge">
+                        <?= $unreadCount > 99 ? '99+' : $unreadCount ?>
+                    </span>
+                <?php endif; ?>
             </a>
 
             <button class="admin-avatar" id="avatarBtn" type="button" aria-label="Atvērt admin izvēlni">
@@ -475,6 +603,19 @@ $logoutUrl    = BASE_URL . 'auth/logout.php';
                 <a href="<?= $dashboardUrl ?>">
                     <i class="fas fa-gauge"></i>
                     Panelis
+                </a>
+
+                <a href="<?= $notificationsUrl ?>">
+                    <i class="fas fa-bell"></i>
+                    Paziņojumi
+                    <?php if ($unreadCount > 0): ?>
+                        (<?= $unreadCount > 99 ? '99+' : $unreadCount ?>)
+                    <?php endif; ?>
+                </a>
+
+                <a href="<?= $createNotificationUrl ?>">
+                    <i class="fas fa-paper-plane"></i>
+                    Izveidot paziņojumu
                 </a>
 
                 <a href="<?= $usersUrl ?>">

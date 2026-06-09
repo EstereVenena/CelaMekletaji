@@ -4,6 +4,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once __DIR__ . '/../config/app.php';
+require_once __DIR__ . '/../config/database.php';
 
 $allowedRoles = ['Direktors', 'direktors'];
 
@@ -17,6 +18,34 @@ if (
 
 $username = trim($_SESSION["lietotajvards"] ?? 'Direktors');
 $userRole = trim($_SESSION["loma"] ?? 'Direktors');
+
+/* ===============================
+   NELASĪTIE PAZIŅOJUMI
+================================ */
+$unreadCount = 0;
+
+if (isset($_SESSION["lietotajs_id"])) {
+    $userId = (int)$_SESSION["lietotajs_id"];
+
+    $sqlUnread = "
+        SELECT COUNT(*) AS total
+        FROM cm_notifications
+        WHERE user_id = ?
+        AND is_read = 0
+    ";
+
+    $stmtUnread = $savienojums->prepare($sqlUnread);
+
+    if ($stmtUnread) {
+        $stmtUnread->bind_param("i", $userId);
+        $stmtUnread->execute();
+
+        $resultUnread = $stmtUnread->get_result();
+        $rowUnread = $resultUnread->fetch_assoc();
+
+        $unreadCount = (int)($rowUnread['total'] ?? 0);
+    }
+}
 
 $pageTitle = $title ?? 'Direktora panelis';
 $pageName  = $lapa ?? 'Direktora panelis';
@@ -32,7 +61,8 @@ function directorNavActive(array $pages, string $currentPage): string
 /* ===============================
    SAITES
 ================================ */
-$dashboardUrl = BASE_URL . 'dashboards/director.php';
+$dashboardUrl      = BASE_URL . 'dashboards/director.php';
+$notificationsUrl = BASE_URL . 'dashboards/notifications.php';
 
 $clubUrl             = BASE_URL . 'director/club.php';
 $clubActivitiesUrl   = BASE_URL . 'director/activities.php';
@@ -47,10 +77,6 @@ $allUsersUrl = BASE_URL . 'director/users.php';
 
 $addUserUrl = BASE_URL . 'director/add_user.php';
 
-/*
-   Kopīgais profila fails visām lomām:
-   /4pt/venena/celamekletaji/profile.php
-*/
 $profileUrl = BASE_URL . 'profile.php';
 
 $homeUrl    = BASE_URL . 'auth/logout.php?redirect=home';
@@ -305,6 +331,56 @@ if ($username !== '') {
             transform: translateY(-1px);
         }
 
+        .director-notification {
+            position: relative;
+            width: 44px;
+            height: 44px;
+            display: grid;
+            place-items: center;
+            text-decoration: none;
+            border-radius: 50%;
+            background: #eef3ff;
+            color: #173f84;
+            font-size: 1.1rem;
+            transition: .2s ease;
+            flex-shrink: 0;
+        }
+
+        .director-notification:hover {
+            background: #dfeaff;
+            transform: translateY(-1px);
+        }
+
+        .director-notification i {
+            color: #173f84;
+        }
+
+        .director-notification.is-active {
+            background: #173f84;
+        }
+
+        .director-notification.is-active i {
+            color: #f4c430;
+        }
+
+        .director-notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
+            border-radius: 999px;
+            background: #d62828;
+            color: #fff;
+            font-size: .72rem;
+            font-weight: 1000;
+            display: grid;
+            place-items: center;
+            border: 2px solid #fff;
+            line-height: 1;
+        }
+
         .director-user-menu {
             position: relative;
         }
@@ -545,6 +621,13 @@ if ($username !== '') {
                 height: 44px;
             }
 
+            .director-notification,
+            .director-avatar,
+            .director-menu-btn {
+                width: 42px;
+                height: 42px;
+            }
+
             .director-quick-home {
                 display: none;
             }
@@ -674,6 +757,19 @@ if ($username !== '') {
                 <span>Uz sākumlapu</span>
             </a>
 
+            <a href="<?= $notificationsUrl ?>"
+               class="director-notification <?= str_contains($currentUrl, '/dashboards/notifications.php') ? 'is-active' : ''; ?>"
+               title="Paziņojumi"
+               aria-label="Paziņojumi">
+                <i class="fas fa-bell"></i>
+
+                <?php if ($unreadCount > 0): ?>
+                    <span class="director-notification-badge">
+                        <?= $unreadCount > 99 ? '99+' : $unreadCount ?>
+                    </span>
+                <?php endif; ?>
+            </a>
+
             <div class="director-user-menu" id="directorUserMenu">
 
                 <button
@@ -708,6 +804,16 @@ if ($username !== '') {
                     <a href="<?= $profileUrl ?>" class="director-dropdown-link">
                         <i class="fas fa-user-pen"></i>
                         <span>Labot profilu</span>
+                    </a>
+
+                    <a href="<?= $notificationsUrl ?>" class="director-dropdown-link">
+                        <i class="fas fa-bell"></i>
+                        <span>
+                            Paziņojumi
+                            <?php if ($unreadCount > 0): ?>
+                                (<?= $unreadCount > 99 ? '99+' : $unreadCount ?>)
+                            <?php endif; ?>
+                        </span>
                     </a>
 
                     <a href="<?= $homeUrl ?>" class="director-dropdown-link">
